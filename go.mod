@@ -1,0 +1,11 @@
+module hyperspike.io/eng/hyperctl
+
+go 1.14
+
+require (
+	github.com/aws/aws-sdk-go-v2 v0.23.0
+	github.com/linode/linodego v0.19.0
+	github.com/spf13/cobra v1.0.0
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	k8s.io/client-go v0.18.3
+)
