@@ -13,12 +13,14 @@ import (
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
 type Client struct {
 	Cfg aws.Config
 	Tags map[string]string
 	Id string
+	Ec2 *ec2.Client
 }
 
 func Init() Client {
@@ -38,6 +40,7 @@ func Init() Client {
 	// Set the AWS Region that the service clients should use
 	c.Id =  strings.Join([]string{"hyperspike", sha1_hash[0:7]},"-")
 	c.Cfg.Region = "us-east-2"
+	c.Ec2 = ec2.New(c.Cfg)
 
 	// Using the Config value, create the DynamoDB client
 	svc := iam.New(c.Cfg)
