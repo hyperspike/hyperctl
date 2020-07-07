@@ -125,6 +125,7 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.128.0/22 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.132.0/22 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.136.0/22 -j MASQUERADE",
+		"sudo rc-service iptables save",
 	})
 }
 
