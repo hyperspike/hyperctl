@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"hyperspike.io/eng/hyperctl/auth/ssh"
+	"hyperspike.io/eng/hyperctl/bootstrap/bastion"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
@@ -98,7 +99,7 @@ func (c Client) CreateCluster() {
 	key := ssh.New(4096)
 	key.WritePrivateKey("bastion")
 	bastionKey := c.key("bastion", key)
-	fwA := c.instance("Firewall - 1", "ami-008a61f78ba92b950", bastionKey, edgeA, edgeSg)
+	fwA, fwAAddress := c.instance("Firewall - 1", "ami-008a61f78ba92b950", bastionKey, edgeA, edgeSg)
 
 	natRoute := c.routeTable(vpc, fwA, "0.0.0.0/0")
 	c.assocRoute(masterA, natRoute)
@@ -107,6 +108,9 @@ func (c Client) CreateCluster() {
 	c.assocRoute(nodeA, natRoute)
 	c.assocRoute(nodeB, natRoute)
 	c.assocRoute(nodeC, natRoute)
+	fwHostA := bastion.New(fwAAddress, 22, key.PrivateKey, "alpine")
+	fwHostA.Connect()
+	fwHostA.Run([]string{"echo derp"})
 }
 
 func (c Client) tag(ids []string, t map[string]string) {
@@ -580,7 +584,7 @@ func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir 
 	return ""
 }
 
-func (c Client) instance(name string, ami string, keyPair string, subnet string, sg string) string {
+func (c Client) instance(name string, ami string, keyPair string, subnet string, sg string) (string, string) {
 	input := &ec2.RunInstancesInput{
 		BlockDeviceMappings: []ec2.BlockDeviceMapping{
 			{
@@ -633,7 +637,7 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return ""
+		return "", ""
 	}
 	
 	stateInput := &ec2.DescribeInstancesInput{
@@ -643,11 +647,11 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 	err = c.Ec2.WaitUntilInstanceRunning(context.Background(), stateInput)
 	if err != nil {
 		fmt.Errorf("failed to wait for bucket exists, %v", err)
-		return ""
+		return "", ""
 	}
 
 	fmt.Println(result)
-	return *result.Instances[0].InstanceId
+	return *result.Instances[0].InstanceId, *result.Instances[0].PublicIpAddress
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {
@@ -675,6 +679,8 @@ func (c Client) key(name string, s ssh.Ssh) string {
 	fmt.Println(result)
 	return *result.ImportKeyPairOutput.KeyName
 }
+
+
 // create Bastion
 
 // IPSec
