@@ -110,7 +110,22 @@ func (c Client) CreateCluster() {
 	c.assocRoute(nodeC, natRoute)
 	fwHostA := bastion.New(fwAAddress, 22, key.PrivateKey, "alpine")
 	fwHostA.Connect()
-	fwHostA.Run([]string{"echo derp"})
+	fwHostA.Run([]string{
+		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
+		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
+		"sudo apk update",
+		"sudo apk add -u openssh iptables",
+		`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
+		"sudo rc-service sshd restart",
+		"sudo su -c 'echo net.ip4.ip_forwarding=1' >> /etc/sysctl.conf",
+		"sudo sysctl -p",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.140.0/24 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.141.0/24 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.142.0/24 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.128.0/22 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.132.0/22 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.136.0/22 -j MASQUERADE",
+	})
 }
 
 func (c Client) tag(ids []string, t map[string]string) {
