@@ -68,6 +68,8 @@ func (c Client) CreateCluster() {
 	edgeIngress = append(edgeIngress, c.securityGroupRule(500, 500, "0.0.0.0/0", "udp", "500 IpSec"))
 	edgeIngress = append(edgeIngress, c.securityGroupRule(4500, 4500, "0.0.0.0/0", "udp", "4500 IpSec"))
 	edgeIngress = append(edgeIngress, c.securityGroupRule(443, 443, "0.0.0.0/0", "tcp", "https just in case"))
+	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "NAT Master security group"))
+	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "NAT Node security group"))
 	c.securityGroupRuleApply(edgeSg, []ec2.IpPermission{edgeEgress}, Egress)
 
 	c.securityGroupRuleApply(edgeSg, edgeIngress, Ingress)
