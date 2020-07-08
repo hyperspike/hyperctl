@@ -69,7 +69,7 @@ func (c Client) CreateCluster() {
 	edgeIngress = append(edgeIngress, c.securityGroupRule(4500, 4500, "0.0.0.0/0", "udp", "4500 IpSec"))
 	edgeIngress = append(edgeIngress, c.securityGroupRule(443, 443, "0.0.0.0/0", "tcp", "https just in case"))
 	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "NAT Master security group"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "NAT Node security group"))
+	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, nodeSg, "-1", "NAT Node security group"))
 	c.securityGroupRuleApply(edgeSg, []ec2.IpPermission{edgeEgress}, Egress)
 
 	c.securityGroupRuleApply(edgeSg, edgeIngress, Ingress)
@@ -110,7 +110,7 @@ func (c Client) CreateCluster() {
 	c.assocRoute(nodeA, natRoute)
 	c.assocRoute(nodeB, natRoute)
 	c.assocRoute(nodeC, natRoute)
-	fwHostA := bastion.New(fwAAddress, 22, key.PrivateKey, "alpine")
+	fwHostA := bastion.New(fwAAddress + "/32" , 22, key.PrivateKey, "alpine")
 	fwHostA.Connect()
 	fwHostA.Run([]string{
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
@@ -119,7 +119,7 @@ func (c Client) CreateCluster() {
 		"sudo apk add -u openssh iptables",
 		`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
 		"sudo rc-service sshd restart",
-		"sudo su -c 'echo net.ip4.ip_forwarding=1' >> /etc/sysctl.conf",
+		"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
 		"sudo sysctl -p",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.140.0/24 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.141.0/24 -j MASQUERADE",
@@ -657,19 +657,36 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 		}
 		return "", ""
 	}
-	
+
 	stateInput := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{*result.Instances[0].InstanceId},
 	}
-	// stateReq := c.Ec2.DescribeNatGatewaysRequest(stateInput)
+
 	err = c.Ec2.WaitUntilInstanceRunning(context.Background(), stateInput)
 	if err != nil {
-		fmt.Errorf("failed to wait for bucket exists, %v", err)
+		fmt.Errorf("failed to wait for instance to be running, %v", err)
 		return "", ""
 	}
 
-	fmt.Println(result)
-	return *result.Instances[0].InstanceId, *result.Instances[0].PublicIpAddress
+	stateReq := c.Ec2.DescribeInstancesRequest(stateInput)
+	res, err := stateReq.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return "", ""
+	}
+
+	fmt.Println(res)
+
+	return *result.Instances[0].InstanceId, *res.DescribeInstancesOutput.Reservations[0].Instances[0].PublicIpAddress
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {

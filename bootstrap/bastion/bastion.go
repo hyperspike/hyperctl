@@ -17,9 +17,10 @@ type Host struct {
 	Client  *ssh.Client
 	Session *ssh.Session
 	Port    int
+	User    string
 }
 
-func New(ip string, port int, key []byte, user string) Host {
+func New(ip string, port int, key []byte, user string) *Host {
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
 		log.Fatalf("unable to parse private key: %v", err)
@@ -30,6 +31,8 @@ func New(ip string, port int, key []byte, user string) Host {
 		log.Fatal(err)
 	}
 	h := Host{
+		User: user,
+		Port: port,
 		IP: &addr4,
 		Ssh: &ssh.ClientConfig{
 			User: user,
@@ -39,11 +42,13 @@ func New(ip string, port int, key []byte, user string) Host {
 			Timeout: dur,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
+		Client:  &ssh.Client{},
+		Session: &ssh.Session{},
 	}
-	return h
+	return &h
 }
 
-func (h Host) Connect() error {
+func (h *Host) Connect() error {
 	var tries int
 	var err error
 	for {
@@ -51,40 +56,40 @@ func (h Host) Connect() error {
 		if err != nil {
 			log.Printf("failed to connect %v, %v\n", h.IP, err)
 		} else {
-			return nil
+			break
 		}
 		time.Sleep(3 * time.Second)
 		if tries > 10 {
 			log.Printf("failed to establish connection %v, %v\n", h.IP, err)
 			return errors.New("failed to establish new connection")
 		}
-	}
-	h.Session, err = h.Client.NewSession()
-	if err != nil {
-		h.Session = nil
-		return err
+		tries++
 	}
 	return nil
 }
 
-func (h Host) Run(commands []string) error {
+func (h *Host) Run(commands []string) error {
 	timeout := 1 * time.Minute
-	promptRe := regexp.MustCompile("#")
+	promptRe := regexp.MustCompile(h.User)
 
 	e, _, err := expect.SpawnSSH(h.Client, timeout)
 	if err != nil {
 		log.Printf("failed to spawn exec ssh %v\n", err)
 		return err
 	}
+	defer e.Close()
 	e.Expect(promptRe, timeout)
 
 	var result string
 	for _, cmd := range commands {
-		e.Send(cmd)
-		_, _, _ = e.Expect(promptRe, timeout)
+		e.Send(cmd + "\n")
 		result, _, _ = e.Expect(promptRe, timeout)
 		log.Printf("%v, %s: %s\n", h.IP, cmd, result)
 	}
-	e.Send("exit")
+	e.Send("exit\n")
 	return nil
+}
+
+func (h *Host) Close() {
+	h.Client.Close()
 }
