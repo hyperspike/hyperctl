@@ -53,10 +53,8 @@ func (h *Host) Connect() error {
 	var err error
 	for {
 		h.Client, err = ssh.Dial("tcp", fmt.Sprintf("%v:%d", h.IP, h.Port), h.Ssh)
-		if err != nil {
-			log.Printf("failed to connect %v, %v\n", h.IP, err)
-		} else {
-			break
+		if err == nil {
+			return nil
 		}
 		time.Sleep(3 * time.Second)
 		if tries > 10 {
@@ -68,10 +66,41 @@ func (h *Host) Connect() error {
 	return nil
 }
 
+func (h *Host) Bastion(b *Host) error {
+	if b.Client == nil {
+		err := h.Connect()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Dial a connection to the service host, from the bastion
+	conn, err := b.Client.Dial("tcp", fmt.Sprintf("%v:%d", h.IP, h.Port))
+	if err != nil {
+		log.Printf("failed to connect to host from bastion [%v]", err)
+		return err
+	}
+
+	ncc, chans, reqs, err := ssh.NewClientConn(conn, fmt.Sprintf("%v:%d", h.IP, h.Port), h.Ssh)
+	if err != nil {
+		log.Printf("failed to connect to host from bastion [%v]", err)
+		return err
+	}
+
+	h.Client = ssh.NewClient(ncc, chans, reqs)
+	return nil
+}
+
 func (h *Host) Run(commands []string) error {
 	timeout := 1 * time.Minute
 	promptRe := regexp.MustCompile(h.User)
 
+	if h.Client == nil {
+		err := h.Connect()
+		if err != nil {
+			return err
+		}
+	}
 	e, _, err := expect.SpawnSSH(h.Client, timeout)
 	if err != nil {
 		log.Printf("failed to spawn exec ssh %v\n", err)

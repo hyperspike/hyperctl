@@ -31,11 +31,6 @@ func (c Client) CreateCluster() {
 	nodeA    := c.subnet(vpc, "10.20.128.0/22", "Nodes - 0", false, "use2-az1")
 	nodeB    := c.subnet(vpc, "10.20.132.0/22", "Nodes - 1", false, "use2-az2")
 	nodeC    := c.subnet(vpc, "10.20.136.0/22", "Nodes - 2", false, "use2-az3")
-	/*
-	ingressA := c.subnet(vpc, "10.20.146.0/24", "Ingress - 0", true, "use2-az1")
-	ingressB := c.subnet(vpc, "10.20.147.0/24", "Ingress - 1", true, "use2-az2")
-	ingressC := c.subnet(vpc, "10.20.148.0/24", "Ingress - 2", true, "use2-az3")
-	*/
 	edgeA := c.subnet(vpc, "10.20.0.0/26",   "Edge - 0", true, "use2-az1")
 	edgeB := c.subnet(vpc, "10.20.0.64/26",  "Edge - 1", true, "use2-az2")
 	edgeC := c.subnet(vpc, "10.20.0.128/26", "Edge - 2", true, "use2-az3")
@@ -46,15 +41,6 @@ func (c Client) CreateCluster() {
 	c.assocRoute(edgeA, gwRoute)
 	c.assocRoute(edgeB, gwRoute)
 	c.assocRoute(edgeC, gwRoute)
-	/*
-	c.assocRoute(ingressA, gwRoute)
-	c.assocRoute(ingressB, gwRoute)
-	c.assocRoute(ingressC, gwRoute)
-	*/
-
-	/*
-	nat := c.nat(edgeA)
-	*/
 
 	edgeSg := c.securityGroup(vpc, "edge", "Edge Bastion")
 	masterSg := c.securityGroup(vpc, "master", "Master Nodes")
@@ -111,7 +97,6 @@ func (c Client) CreateCluster() {
 	c.assocRoute(nodeB, natRoute)
 	c.assocRoute(nodeC, natRoute)
 	fwHostA := bastion.New(fwAAddress + "/32" , 22, key.PrivateKey, "alpine")
-	fwHostA.Connect()
 	fwHostA.Run([]string{
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
