@@ -42,8 +42,8 @@ func New(ip string, port int, key []byte, user string) *Host {
 			Timeout: dur,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
-		Client:  &ssh.Client{},
-		Session: &ssh.Session{},
+		Client:  nil,
+		Session: nil,
 	}
 	return &h
 }
@@ -121,4 +121,10 @@ func (h *Host) Run(commands []string) error {
 
 func (h *Host) Close() {
 	h.Client.Close()
+	h.Client = nil
+}
+
+func (h *Host) Reconnect() {
+	h.Close()
+	h.Connect()
 }

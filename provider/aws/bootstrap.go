@@ -20,6 +20,18 @@ const (
 	Egress = "egress"
 )
 
+type Instance struct {
+	name    string
+	ami     string
+	subnet  string
+	sg      string
+	root    int64
+	key     string
+	size    string
+	id      string
+	public  string
+	private string
+}
 
 func (c Client) CreateCluster() {
 	vpc := c.vpc("10.20.0.0/16")
@@ -87,16 +99,16 @@ func (c Client) CreateCluster() {
 	key := ssh.New(4096)
 	key.WritePrivateKey("bastion")
 	bastionKey := c.key("bastion", key)
-	fwA, fwAAddress := c.instance("Firewall - 1", "ami-008a61f78ba92b950", bastionKey, edgeA, edgeSg)
+	fwA, _ := c.instance(&Instance{name:"Firewall - 1", ami:"ami-008a61f78ba92b950", key:bastionKey, subnet:edgeA, sg:edgeSg})
 
-	natRoute := c.routeTable(vpc, fwA, "0.0.0.0/0")
+	natRoute := c.routeTable(vpc, fwA.id, "0.0.0.0/0")
 	c.assocRoute(masterA, natRoute)
 	c.assocRoute(masterB, natRoute)
 	c.assocRoute(masterC, natRoute)
 	c.assocRoute(nodeA, natRoute)
 	c.assocRoute(nodeB, natRoute)
 	c.assocRoute(nodeC, natRoute)
-	fwHostA := bastion.New(fwAAddress + "/32" , 22, key.PrivateKey, "alpine")
+	fwHostA := bastion.New(fwA.public + "/32" , 22, key.PrivateKey, "alpine")
 	fwHostA.Run([]string{
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
@@ -113,6 +125,13 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.132.0/22 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.136.0/22 -j MASQUERADE",
 		"sudo rc-service iptables save",
+	})
+	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:"ami-004a4406fef940ebd", key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
+	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
+	fwHostA.Reconnect()
+	masterHostA.Bastion(fwHostA)
+	masterHostA.Run([]string{
+		"touch derp.herp",
 	})
 }
 
@@ -587,32 +606,43 @@ func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir 
 	return ""
 }
 
-func (c Client) instance(name string, ami string, keyPair string, subnet string, sg string) (string, string) {
+func (c Client) instance(i *Instance) (*Instance, error) {
+	if i.root == 0 {
+		i.root = 20
+	}
+	iType := ec2.InstanceTypeT3aMicro
+	if i.size == "t3amedium" {
+		iType = ec2.InstanceTypeT3aMedium
+	} else if i.size == "t3axlarge" {
+		iType = ec2.InstanceTypeT3aXlarge
+	} else if i.size == "t3a2xlarge" {
+		iType = ec2.InstanceTypeT3a2xlarge
+	}
 	input := &ec2.RunInstancesInput{
 		BlockDeviceMappings: []ec2.BlockDeviceMapping{
 			{
 				DeviceName: aws.String("/dev/xvda"),
 				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(20),
+					VolumeSize: aws.Int64(i.root),
 				},
 			},
 		},
-		ImageId:      aws.String(ami),
-		InstanceType: ec2.InstanceTypeT3aMicro,
-		KeyName:      aws.String(keyPair),
+		ImageId:      aws.String(i.ami),
+		InstanceType: iType,
+		KeyName:      aws.String(i.key),
 		MaxCount:     aws.Int64(1),
 		MinCount:     aws.Int64(1),
 		SecurityGroupIds: []string{
-			sg,
+			i.sg,
 		},
-		SubnetId: aws.String(subnet),
+		SubnetId: aws.String(i.subnet),
 		TagSpecifications: []ec2.TagSpecification{
 			{
 				ResourceType: ec2.ResourceTypeInstance,
 				Tags: []ec2.Tag{
 					{
 						Key:   aws.String("Name"),
-						Value: aws.String(strings.Join([]string{name, c.Id}, " ")),
+						Value: aws.String(strings.Join([]string{i.name, c.Id}, " ")),
 					},
 					{
 						Key:   aws.String("KubernetesCluster"),
@@ -640,7 +670,7 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return "", ""
+		return nil, err
 	}
 
 	stateInput := &ec2.DescribeInstancesInput{
@@ -650,7 +680,7 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 	err = c.Ec2.WaitUntilInstanceRunning(context.Background(), stateInput)
 	if err != nil {
 		fmt.Errorf("failed to wait for instance to be running, %v", err)
-		return "", ""
+		return nil, err
 	}
 
 	stateReq := c.Ec2.DescribeInstancesRequest(stateInput)
@@ -666,12 +696,18 @@ func (c Client) instance(name string, ami string, keyPair string, subnet string,
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return "", ""
+		return nil, err
 	}
 
 	fmt.Println(res)
 
-	return *result.Instances[0].InstanceId, *res.DescribeInstancesOutput.Reservations[0].Instances[0].PublicIpAddress
+	i.id      = *result.Instances[0].InstanceId
+	if res.DescribeInstancesOutput.Reservations[0].Instances[0].PublicIpAddress != nil {
+		i.public  = *res.DescribeInstancesOutput.Reservations[0].Instances[0].PublicIpAddress
+	}
+	i.private = *res.DescribeInstancesOutput.Reservations[0].Instances[0].PrivateIpAddress
+
+	return i, nil
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {
