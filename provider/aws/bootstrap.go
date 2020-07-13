@@ -22,6 +22,7 @@ const (
 
 type Instance struct {
 	name    string
+	nat     bool
 	ami     string
 	subnet  string
 	sg      string
@@ -99,7 +100,7 @@ func (c Client) CreateCluster() {
 	key := ssh.New(4096)
 	key.WritePrivateKey("bastion")
 	bastionKey := c.key("bastion", key)
-	fwA, _ := c.instance(&Instance{name:"Firewall - 1", ami:"ami-008a61f78ba92b950", key:bastionKey, subnet:edgeA, sg:edgeSg})
+	fwA, _ := c.instance(&Instance{name:"Firewall - 1", ami:"ami-008a61f78ba92b950", key:bastionKey, subnet:edgeA, sg:edgeSg, nat: true})
 
 	natRoute := c.routeTable(vpc, fwA.id, "0.0.0.0/0")
 	c.assocRoute(masterA, natRoute)
@@ -131,7 +132,13 @@ func (c Client) CreateCluster() {
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
 	masterHostA.Run([]string{
-		"touch derp.herp",
+		"sudo resize2fs /dev/xvda",
+		"sudo su -c 'uuidgen|tr -d - > /etc/machine-id'",
+		"chmod +x /tmp/init-master.sh",
+		"chmod +x /tmp/up.sh",
+		"sudo su -c 'hostname -f > /etc/hostname'",
+		"sudo rc-service hostname restart",
+		"sudo kubeadm init --cri-socket /run/crio/crio.sock --upload-certs --skip-phases=preflight,addon/kube-proxy",
 	})
 }
 
@@ -671,6 +678,29 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 			fmt.Println(err.Error())
 		}
 		return nil, err
+	}
+	if i.nat {
+		in := &ec2.ModifyInstanceAttributeInput{
+			InstanceId: aws.String(*result.Instances[0].InstanceId),
+			SourceDestCheck: &ec2.AttributeBooleanValue{
+				Value: aws.Bool(false),
+			},
+		}
+		natReq := c.Ec2.ModifyInstanceAttributeRequest(in)
+		_, err := natReq.Send(context.Background())
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				default:
+					fmt.Println(aerr.Error())
+				}
+			} else {
+				// Print the error, cast err to awserr.Error to get the Code and
+				// Message from an error.
+				fmt.Println(err.Error())
+			}
+			return nil, err
+		}
 	}
 
 	stateInput := &ec2.DescribeInstancesInput{

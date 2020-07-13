@@ -93,7 +93,8 @@ func (h *Host) Bastion(b *Host) error {
 
 func (h *Host) Run(commands []string) error {
 	timeout := 1 * time.Minute
-	promptRe := regexp.MustCompile(h.User)
+	// promptRe := regexp.MustCompile(h.User)
+	promptRe := regexp.MustCompile("~")
 
 	if h.Client == nil {
 		err := h.Connect()
