@@ -114,9 +114,11 @@ func (c Client) CreateCluster() {
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
 		"sudo apk update",
-		"sudo apk add -u openssh iptables",
+		"sudo apk add -u openssh iptables suricata",
 		`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
 		"sudo rc-service sshd restart",
+		"sudo rc-update add suricata default",
+		"sudo rc-service suricata start",
 		"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
 		"sudo sysctl -p",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.140.0/24 -j MASQUERADE",
@@ -125,6 +127,10 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.128.0/22 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.132.0/22 -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.136.0/22 -j MASQUERADE",
+		"sudo iptables -I INPUT -j NFQUEUE",
+		"sudo iptables -I OUTPUT -j NFQUEUE",
+		"sudo iptables -t nat -I INPUT -j NFQUEUE",
+		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
 	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:"ami-004a4406fef940ebd", key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
