@@ -7,10 +7,12 @@ import (
 
 	"hyperspike.io/eng/hyperctl/auth/ssh"
 	"hyperspike.io/eng/hyperctl/bootstrap/bastion"
+	"hyperspike.io/eng/hyperctl/templates/kubeadm"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 )
 
 
@@ -137,6 +139,9 @@ func (c Client) CreateCluster() {
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
+	elb, _ := c.loadBalancer("Master ELB", masterLbSg, []string{masterA, masterB, masterC})
+	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", "10.20.128.0/20", "172.16.0.0/18")
+	kubeadmConf, _ := k.KubeadmYaml()
 	masterHostA.Run([]string{
 		"sudo resize2fs /dev/xvda",
 		"sudo su -c 'uuidgen|tr -d - > /etc/machine-id'",
@@ -144,7 +149,9 @@ func (c Client) CreateCluster() {
 		"chmod +x /tmp/up.sh",
 		"sudo su -c 'hostname -f > /etc/hostname'",
 		"sudo rc-service hostname restart",
-		"sudo kubeadm init --cri-socket /run/crio/crio.sock --upload-certs --skip-phases=preflight,addon/kube-proxy",
+		"echo -e '" + kubeadmConf + "' > kubeadm.conf",
+		"mkdir kustomize",
+		"sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf --upload-certs --skip-phases=preflight,addon/kube-proxy -k kustomize",
 	})
 }
 
@@ -772,6 +779,69 @@ func (c Client) key(name string, s ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
+func (c Client) loadBalancer(name string, sg string, subnets []string) (string, error){
+	svc := elasticloadbalancing.New(c.Cfg)
+	input := &elasticloadbalancing.CreateLoadBalancerInput{
+		Listeners: []elasticloadbalancing.Listener{
+			{
+				InstancePort:     aws.Int64(6443),
+				InstanceProtocol: aws.String("TCP"),
+				LoadBalancerPort: aws.Int64(6443),
+				Protocol:         aws.String("TCP"),
+			},
+		},
+		LoadBalancerName: aws.String(name),
+		Scheme:           aws.String("internal"),
+		SecurityGroups: []string{
+			sg,
+		},
+		Subnets: subnets,
+	}
+
+	req := svc.CreateLoadBalancerRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case elasticloadbalancing.ErrCodeDuplicateAccessPointNameException:
+				fmt.Println(elasticloadbalancing.ErrCodeDuplicateAccessPointNameException, aerr.Error())
+			case elasticloadbalancing.ErrCodeTooManyAccessPointsException:
+				fmt.Println(elasticloadbalancing.ErrCodeTooManyAccessPointsException, aerr.Error())
+			case elasticloadbalancing.ErrCodeCertificateNotFoundException:
+				fmt.Println(elasticloadbalancing.ErrCodeCertificateNotFoundException, aerr.Error())
+			case elasticloadbalancing.ErrCodeInvalidConfigurationRequestException:
+				fmt.Println(elasticloadbalancing.ErrCodeInvalidConfigurationRequestException, aerr.Error())
+			case elasticloadbalancing.ErrCodeSubnetNotFoundException:
+				fmt.Println(elasticloadbalancing.ErrCodeSubnetNotFoundException, aerr.Error())
+			case elasticloadbalancing.ErrCodeInvalidSubnetException:
+				fmt.Println(elasticloadbalancing.ErrCodeInvalidSubnetException, aerr.Error())
+			case elasticloadbalancing.ErrCodeInvalidSecurityGroupException:
+				fmt.Println(elasticloadbalancing.ErrCodeInvalidSecurityGroupException, aerr.Error())
+			case elasticloadbalancing.ErrCodeInvalidSchemeException:
+				fmt.Println(elasticloadbalancing.ErrCodeInvalidSchemeException, aerr.Error())
+			case elasticloadbalancing.ErrCodeTooManyTagsException:
+				fmt.Println(elasticloadbalancing.ErrCodeTooManyTagsException, aerr.Error())
+			case elasticloadbalancing.ErrCodeDuplicateTagKeysException:
+				fmt.Println(elasticloadbalancing.ErrCodeDuplicateTagKeysException, aerr.Error())
+			case elasticloadbalancing.ErrCodeUnsupportedProtocolException:
+				fmt.Println(elasticloadbalancing.ErrCodeUnsupportedProtocolException, aerr.Error())
+			case elasticloadbalancing.ErrCodeOperationNotPermittedException:
+				fmt.Println(elasticloadbalancing.ErrCodeOperationNotPermittedException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return "", err
+	}
+
+	fmt.Println(result)
+
+	return *result.CreateLoadBalancerOutput.DNSName, nil
+}
 
 // create Bastion
 
