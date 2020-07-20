@@ -15,6 +15,7 @@ type Conf struct {
 	ClusterName   string
 	PodSubnet     string
 	ServiceSubnet string
+	KeyArn        string
 }
 
 func randomHex(n int) (string, error) {
@@ -25,7 +26,7 @@ func randomHex(n int) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func New(clusterName string, ip string, region string, lbDnsPriv string, podSubnet string, serviceSubnet string) *Conf {
+func New(clusterName string, ip string, region string, lbDnsPriv string, podSubnet string, serviceSubnet string, keyarn string) *Conf {
 	key, err := randomHex(32)
 	if err != nil {
 		return nil
@@ -38,6 +39,7 @@ func New(clusterName string, ip string, region string, lbDnsPriv string, podSubn
 		ClusterName: clusterName,
 		PodSubnet: podSubnet,
 		ServiceSubnet: serviceSubnet,
+		KeyArn: keyarn,
 	}
 	return c
 }

@@ -140,8 +140,9 @@ func (c Client) CreateCluster() {
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
 	elb, _ := c.loadBalancer("Master ELB", masterLbSg, []string{masterA, masterB, masterC})
-	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", "10.20.128.0/20", "172.16.0.0/18")
+	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", "10.20.128.0/20", "172.16.0.0/18", "keyarn")
 	kubeadmConf, _ := k.KubeadmYaml()
+	kubeSecrets, _ := k.SecretsProvider()
 	masterHostA.Run([]string{
 		"sudo resize2fs /dev/xvda",
 		"sudo su -c 'uuidgen|tr -d - > /etc/machine-id'",
@@ -150,7 +151,15 @@ func (c Client) CreateCluster() {
 		"sudo su -c 'hostname -f > /etc/hostname'",
 		"sudo rc-service hostname restart",
 		"echo -e '" + kubeadmConf + "' > kubeadm.conf",
+		"echo -e '" + k.Secrets() + "' > secrets.yaml",
+		"echo -e '" + kubeSecrets + "' > aws-encryption-provider.yaml",
+		"sudo mkdir -p /etc/kubernetes/manifests",
+		"sudo cp secrets.yaml /etc/kubernetes",
+		"sudo cp aws-encryption-provider.yaml /etc/kubernetes/manifests",
 		"mkdir kustomize",
+		"echo -e '" + k.Kustomization() + "' > kustomize/kustomization.yaml",
+		"echo -e '" + k.ApiSecretsProviderYaml() + "' > kustomize/api-secrets-provider.yaml",
+		"sudo rc-update add kubelet default",
 		"sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf --upload-certs --skip-phases=preflight,addon/kube-proxy -k kustomize",
 	})
 }
@@ -843,8 +852,34 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
 
-// create Bastion
+func (c Client) CreateBucket(name string) (string, error) {
 
+	return "", nil
+}
+
+func (c Client) CreateKey(name string, values *map[string]string) (string, error) {
+
+	return "", nil
+}
+
+func (c Client) CreateRole(name string, role string) (string, error) {
+
+	return "", nil
+}
+
+func (c Client) CreatePolicy(name string, policy string) (string, error) {
+
+	return "", nil
+}
+
+func (c Client) CreateInstancePolicy(name string, role string) (string, error) {
+	return "", nil
+}
+
+func (c Client) AttachPolicy(name string, roles []string, policy string) (string, error) {
+
+	return "", nil
+}
 // IPSec
 
 // Kube Cluster
