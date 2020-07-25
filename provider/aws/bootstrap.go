@@ -135,7 +135,8 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
-	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:"ami-004a4406fef940ebd", key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
+	ami, _ := c.SearchAMI("751883444564", map[string]string{"tag:Name":"hyperspike-*"})
+	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
@@ -323,6 +324,10 @@ func (c Client) subnet(vpc string, cidr string, name string, public bool, az str
 		"Name": strings.Join([]string{name, c.Id}, " "),
 		"KubernetesCluster": c.Id,
 		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+	}
+	master := false
+	if master {
+		tags["kubernetes.io/role/master"] = "1"
 	}
 	if public {
 		tags["kubernetes.io/role/elb"] = "1"
