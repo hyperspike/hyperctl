@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 )
 
@@ -765,6 +767,118 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 	i.private = *res.DescribeInstancesOutput.Reservations[0].Instances[0].PrivateIpAddress
 
 	return i, nil
+}
+
+func (c Client) kms(name string) (string, error) {
+	svc := kms.New(c.Cfg)
+	input := &kms.CreateKeyInput{
+		Tags: []kms.Tag{
+			{
+				TagKey:   aws.String(strings.Join([]string{"kubernetes.io/cluster/", c.Id}, "")),
+				TagValue: aws.String("owned"),
+			},
+			{
+				TagKey:   aws.String("Name"),
+				TagValue: aws.String(c.Id),
+			},
+		},
+	}
+
+	req := svc.CreateKeyRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case kms.ErrCodeMalformedPolicyDocumentException:
+				fmt.Println(kms.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+			case kms.ErrCodeDependencyTimeoutException:
+				fmt.Println(kms.ErrCodeDependencyTimeoutException, aerr.Error())
+			case kms.ErrCodeInvalidArnException:
+				fmt.Println(kms.ErrCodeInvalidArnException, aerr.Error())
+			case kms.ErrCodeUnsupportedOperationException:
+				fmt.Println(kms.ErrCodeUnsupportedOperationException, aerr.Error())
+			case kms.ErrCodeKMSInternalException:
+				fmt.Println(kms.ErrCodeKMSInternalException, aerr.Error())
+			case kms.ErrCodeLimitExceededException:
+				fmt.Println(kms.ErrCodeLimitExceededException, aerr.Error())
+			case kms.ErrCodeTagException:
+				fmt.Println(kms.ErrCodeTagException, aerr.Error())
+			case kms.ErrCodeCustomKeyStoreNotFoundException:
+				fmt.Println(kms.ErrCodeCustomKeyStoreNotFoundException, aerr.Error())
+			case kms.ErrCodeCustomKeyStoreInvalidStateException:
+				fmt.Println(kms.ErrCodeCustomKeyStoreInvalidStateException, aerr.Error())
+			case kms.ErrCodeCloudHsmClusterInvalidConfigurationException:
+				fmt.Println(kms.ErrCodeCloudHsmClusterInvalidConfigurationException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+
+			fmt.Println(err.Error())
+		}
+		return "", err
+	}
+
+	fmt.Println(result)
+	return *result.KeyMetadata.KeyId, nil
+}
+
+func (c Client) secret(name string, key string, secret string) error {
+
+	svc := secretsmanager.New(c.Cfg)
+	input := &secretsmanager.CreateSecretInput{
+		Description:        aws.String(strings.Join([]string{c.Id, " ", name}, "")),
+		Name:               aws.String(name),
+		SecretString:       aws.String(secret),
+		KmsKeyId:           aws.String(key),
+		Tags: []secretsmanager.Tag{
+			{
+				Key:   aws.String(strings.Join([]string{"kubernetes.io/cluster/", c.Id}, "")),
+				Value: aws.String("owned"),
+			},
+			{
+				Key:   aws.String("Name"),
+				Value: aws.String(name),
+			},
+		},
+	}
+
+	req := svc.CreateSecretRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case secretsmanager.ErrCodeInvalidParameterException:
+				fmt.Println(secretsmanager.ErrCodeInvalidParameterException, aerr.Error())
+			case secretsmanager.ErrCodeInvalidRequestException:
+				fmt.Println(secretsmanager.ErrCodeInvalidRequestException, aerr.Error())
+			case secretsmanager.ErrCodeLimitExceededException:
+				fmt.Println(secretsmanager.ErrCodeLimitExceededException, aerr.Error())
+			case secretsmanager.ErrCodeEncryptionFailure:
+				fmt.Println(secretsmanager.ErrCodeEncryptionFailure, aerr.Error())
+			case secretsmanager.ErrCodeResourceExistsException:
+				fmt.Println(secretsmanager.ErrCodeResourceExistsException, aerr.Error())
+			case secretsmanager.ErrCodeResourceNotFoundException:
+				fmt.Println(secretsmanager.ErrCodeResourceNotFoundException, aerr.Error())
+			case secretsmanager.ErrCodeMalformedPolicyDocumentException:
+				fmt.Println(secretsmanager.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+			case secretsmanager.ErrCodeInternalServiceError:
+				fmt.Println(secretsmanager.ErrCodeInternalServiceError, aerr.Error())
+			case secretsmanager.ErrCodePreconditionNotMetException:
+				fmt.Println(secretsmanager.ErrCodePreconditionNotMetException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+
+			fmt.Println(err.Error())
+		}
+		return err
+	}
+
+	fmt.Println(result)
+
+	return nil
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {
