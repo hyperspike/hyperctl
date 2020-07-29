@@ -5,7 +5,7 @@ BINS := hyperctl
 
 .PHONY: hyperctl
 
-hyperctl:
+$(BINS):
 	go build -v -o $@ ./cmd/
 
 build: $(BINS)

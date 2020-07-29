@@ -18,6 +18,10 @@ type Client struct {
 	Tags map[string]string
 	Id string
 	Ec2 *ec2.Client
+	Localized bool
+	APIEndpoint string
+	APIToken string
+	Role string
 }
 
 func Init() Client {
@@ -30,6 +34,7 @@ func Init() Client {
 	if err != nil {
 		panic("unable to load SDK config, " + err.Error())
 	}
+	c.Localized = false
 
 	h := sha1.New()
 	h.Write([]byte(strconv.FormatInt(time.Now().Unix(),10)))
