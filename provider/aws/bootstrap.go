@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 
 	"hyperspike.io/eng/hyperctl/auth/ssh"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+	"github.com/apparentlymart/go-cidr/cidr"
 )
 
 
@@ -39,18 +41,73 @@ type Instance struct {
 }
 
 func (c Client) CreateCluster() {
-	vpc := c.vpc("10.20.0.0/16")
-	podCidr := "10.20.128.0/20"
+	_, vpcCidr, err := net.ParseCIDR("10.20.0.0/16")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	masterA  := c.subnet(vpc, "10.20.140.0/24", "Master - 0", false, "use2-az1")
-	masterB  := c.subnet(vpc, "10.20.141.0/24", "Master - 1", false, "use2-az2")
-	masterC  := c.subnet(vpc, "10.20.142.0/24", "Master - 2", false, "use2-az3")
-	nodeA    := c.subnet(vpc, "10.20.128.0/22", "Nodes - 0", false, "use2-az1")
-	nodeB    := c.subnet(vpc, "10.20.132.0/22", "Nodes - 1", false, "use2-az2")
-	nodeC    := c.subnet(vpc, "10.20.136.0/22", "Nodes - 2", false, "use2-az3")
-	edgeA := c.subnet(vpc, "10.20.0.0/26",   "Edge - 0", true, "use2-az1")
-	edgeB := c.subnet(vpc, "10.20.0.64/26",  "Edge - 1", true, "use2-az2")
-	edgeC := c.subnet(vpc, "10.20.0.128/26", "Edge - 2", true, "use2-az3")
+	vpc := c.vpc(vpcCidr.String())
+	podCidr, err := cidr.Subnet(vpcCidr, 4, 8)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	masterACidr, err := cidr.Subnet(vpcCidr, 8, 140)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	masterBCidr, err := cidr.Subnet(vpcCidr, 8, 141)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	masterCCidr, err := cidr.Subnet(vpcCidr, 8, 142)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	nodeACidr, err := cidr.Subnet(vpcCidr, 6, 32)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	nodeBCidr, err := cidr.Subnet(vpcCidr, 6, 33)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	nodeCCidr, err := cidr.Subnet(vpcCidr, 6, 34)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	edgeACidr, err := cidr.Subnet(vpcCidr, 10, 0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	edgeBCidr, err := cidr.Subnet(vpcCidr, 10, 1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	edgeCCidr, err := cidr.Subnet(vpcCidr, 10, 2)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, "use2-az1")
+	masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, "use2-az2")
+	masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, "use2-az3")
+	nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, "use2-az1")
+	nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, "use2-az2")
+	nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, "use2-az3")
+	edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, "use2-az1")
+	edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, "use2-az2")
+	edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, "use2-az3")
 
 	gw  := c.gateway(vpc)
 
@@ -81,9 +138,9 @@ func (c Client) CreateCluster() {
 	c.securityGroupRuleApply(nodeSg, []ec2.IpPermission{edgeEgress}, Egress)
 
 	masterIngress := []ec2.IpPermission{}
-	masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, podCidr, "tcp", "Allow pods to get API info"))
-	masterIngress = append(masterIngress, c.securityGroupRule(443, 443, podCidr, "tcp", "Allow pods to get API info"))
-	masterIngress = append(masterIngress, c.securityGroupRule(53, 53, podCidr, "udp", "Allow pods to get DNS"))
+	masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, podCidr.String(), "tcp", "Allow pods to get API info"))
+	masterIngress = append(masterIngress, c.securityGroupRule(443, 443, podCidr.String(), "tcp", "Allow pods to get API info"))
+	masterIngress = append(masterIngress, c.securityGroupRule(53, 53, podCidr.String(), "udp", "Allow pods to get DNS"))
 	masterIngress = append(masterIngress, c.securityGroupRule(22, 22, edgeSg, "tcp", "ssh provisioning"))
 	masterIngress = append(masterIngress, c.securityGroupRule(443, 443, nodeSg, "tcp", "Allow nodes to API"))
 	masterIngress = append(masterIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "master master communication"))
@@ -125,12 +182,12 @@ func (c Client) CreateCluster() {
 		"sudo rc-service suricata start",
 		"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
 		"sudo sysctl -p",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.140.0/24 -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.141.0/24 -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.142.0/24 -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.128.0/22 -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.132.0/22 -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s 10.20.136.0/22 -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterBCidr.String() + " -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterCCidr.String() + " -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
+		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
 		"sudo iptables -I INPUT -j NFQUEUE",
 		"sudo iptables -I OUTPUT -j NFQUEUE",
 		"sudo iptables -t nat -I INPUT -j NFQUEUE",
@@ -143,7 +200,7 @@ func (c Client) CreateCluster() {
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
 	elb, _ := c.loadBalancer("Master ELB", masterLbSg, []string{masterA, masterB, masterC})
-	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", "10.20.128.0/20", "172.16.0.0/18", "keyarn")
+	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", podCidr.String(), "172.16.0.0/18", "keyarn")
 	kubeadmConf, _ := k.KubeadmYaml()
 	kubeSecrets, _ := k.SecretsProvider()
 	masterHostA.Run([]string{

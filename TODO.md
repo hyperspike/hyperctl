@@ -23,3 +23,4 @@
     - [ ] IRSA
 3) [x] Shell Completion
 4) [ ] Switch from fmt to log (like argonaut)
+5) [x] Util function to calculate subnets
