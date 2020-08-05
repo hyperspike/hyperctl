@@ -3,7 +3,7 @@
   a) [-] node
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
-    - [ ] Get token from secrets-manager
+    - [x] Get token from secrets-manager
     - [ ] Join node
   b) [-] masters
     - [x] Calculate Cluster-name, and Node Type

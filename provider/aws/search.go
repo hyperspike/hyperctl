@@ -6,11 +6,16 @@ import (
 	"time"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/ec2metadata"
+	"encoding/json"
 )
 
+type Secret struct {
+	Token string `json:"TOKEN"`
+}
 func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) {
 
 	var filters []ec2.Filter
@@ -114,6 +119,9 @@ func (c Client) ClusterName() string {
 }
 
 func (c Client) GetAPIEndpoint() error {
+	if c.APIEndpoint != "" && c.APITokenLocation != "" {
+		return nil
+	}
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.GetItemInput{
 		Key: map[string]dynamodb.AttributeValue{
@@ -144,14 +152,50 @@ func (c Client) GetAPIEndpoint() error {
 		}
 		return err
 	}
-	c.APIEndpoint = *result.Item["APIEndpoint"].S
+	c.APIEndpoint      = *result.Item["APIEndpoint"].S
+	c.APITokenLocation = *result.Item["APITokenLocation"].S
 	return nil
 }
 
 func (c Client) GetAPIToken() error {
-	// transact to get dynamodb c.Id / node / secretname
+	if err := c.GetAPIEndpoint() ; err != nil {
+		return err
+	}
 
-	// fetch secretvalue from secretname
+	svc := secretsmanager.New(c.Cfg)
+	input := &secretsmanager.GetSecretValueInput{
+		SecretId:     aws.String(c.APITokenLocation),
+		VersionStage: aws.String("AWSCURRENT"),
+	}
+
+	req := svc.GetSecretValueRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case secretsmanager.ErrCodeResourceNotFoundException:
+				fmt.Println(secretsmanager.ErrCodeResourceNotFoundException, aerr.Error())
+			case secretsmanager.ErrCodeInvalidParameterException:
+				fmt.Println(secretsmanager.ErrCodeInvalidParameterException, aerr.Error())
+			case secretsmanager.ErrCodeInvalidRequestException:
+				fmt.Println(secretsmanager.ErrCodeInvalidRequestException, aerr.Error())
+			case secretsmanager.ErrCodeDecryptionFailure:
+				fmt.Println(secretsmanager.ErrCodeDecryptionFailure, aerr.Error())
+			case secretsmanager.ErrCodeInternalServiceError:
+				fmt.Println(secretsmanager.ErrCodeInternalServiceError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+
+			fmt.Println(err.Error())
+		}
+		return err
+	}
+
+	var secret Secret
+	json.Unmarshal([]byte(*result.SecretString), &secret)
+	c.APIToken = secret.Token
 
 	return nil
 }

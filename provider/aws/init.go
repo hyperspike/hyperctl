@@ -20,6 +20,7 @@ type Client struct {
 	Ec2 *ec2.Client
 	Localized bool
 	APIEndpoint string
+	APITokenLocation string
 	APIToken string
 	Role string
 }
