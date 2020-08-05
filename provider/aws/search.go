@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/ec2metadata"
@@ -55,7 +56,10 @@ func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) 
 	return ami, nil
 }
 
-func (c Client) calculateClusterName() error {
+func (c Client) ClusterName() string {
+	if c.Localized {
+		return c.Id
+	}
 	svcMeta := ec2metadata.New(c.Cfg)
 	metadata, err := svcMeta.GetInstanceIdentityDocument(context.Background())
 	if err == nil {
@@ -67,7 +71,7 @@ func (c Client) calculateClusterName() error {
 		} else {
 			fmt.Println(err.Error())
 		}
-		return err
+		return ""
 	}
 	fmt.Println(metadata.InstanceID)
 	// fetch tags for instance ec2:DescribeTags
@@ -91,7 +95,7 @@ func (c Client) calculateClusterName() error {
 			// Message from an error.
 			fmt.Println(err.Error())
 		}
-		return err
+		return ""
 	}
 
 	for _, t := range result.Reservations[0].Instances[0].Tags {
@@ -106,26 +110,45 @@ func (c Client) calculateClusterName() error {
 		}
 	}
 	c.Localized = true
-	return nil
+	return c.Id
 }
 
 func (c Client) GetAPIEndpoint() error {
-	if !c.Localized {
-		if err := c.calculateClusterName(); err != nil {
-			return err
-		}
+	svc := dynamodb.New(c.Cfg)
+	input := &dynamodb.GetItemInput{
+		Key: map[string]dynamodb.AttributeValue{
+			"Role": {
+				S: aws.String("Node"),
+			},
+		},
+		TableName: aws.String(c.ClusterName()),
 	}
-	// transact to get dynamodb c.Id / node / api
-
+	req := svc.GetItemRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeProvisionedThroughputExceededException:
+				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+			case dynamodb.ErrCodeResourceNotFoundException:
+				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+			case dynamodb.ErrCodeRequestLimitExceeded:
+				fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+		return err
+	}
+	c.APIEndpoint = *result.Item["APIEndpoint"].S
 	return nil
 }
 
 func (c Client) GetAPIToken() error {
-	if !c.Localized {
-		if err := c.calculateClusterName(); err != nil {
-			return err
-		}
-	}
 	// transact to get dynamodb c.Id / node / secretname
 
 	// fetch secretvalue from secretname
