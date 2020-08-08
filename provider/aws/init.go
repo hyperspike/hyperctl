@@ -22,6 +22,7 @@ type Client struct {
 	APIEndpoint string
 	APITokenLocation string
 	APIToken string
+	APICAHash string
 	Role string
 }
 

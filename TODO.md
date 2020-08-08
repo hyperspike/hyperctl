@@ -1,11 +1,11 @@
 1) [x] Tag based AMI search.
 2) [-] Boot command
-  a) [-] node
+  a) [x] join-nodes
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Get token from secrets-manager
-    - [ ] Join node
-  b) [-] masters
+    - [x] Join node
+  b) [-] join-masters
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [ ] Check for lock
@@ -13,6 +13,8 @@
     - [ ] Check version
     - [ ] Join ring
   c) [-] bootstrap-master
+    - [x] Calculate Cluster-name, and Node Type
+    - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [ ] Check for lock in dynamo
     - [ ] Get lock in dynamo
     - [ ] check initialized-flag

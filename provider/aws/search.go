@@ -118,9 +118,9 @@ func (c Client) ClusterName() string {
 	return c.Id
 }
 
-func (c Client) GetAPIEndpoint() error {
-	if c.APIEndpoint != "" && c.APITokenLocation != "" {
-		return nil
+func (c Client) GetAPIEndpoint() (string, error) {
+	if c.APIEndpoint != "" && c.APITokenLocation != "" && c.APICAHash != "" {
+		return c.APIEndpoint, nil
 	}
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.GetItemInput{
@@ -150,16 +150,24 @@ func (c Client) GetAPIEndpoint() error {
 		} else {
 			fmt.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
 	c.APIEndpoint      = *result.Item["APIEndpoint"].S
 	c.APITokenLocation = *result.Item["APITokenLocation"].S
-	return nil
+	c.APICAHash        = *result.Item["APICAHash"].S
+	return c.APIEndpoint, nil
 }
 
-func (c Client) GetAPIToken() error {
-	if err := c.GetAPIEndpoint() ; err != nil {
-		return err
+func (c Client) GetAPICAHash() (string, error) {
+	if _, err := c.GetAPIEndpoint() ; err != nil {
+		return "", err
+	}
+	return c.APICAHash, nil
+}
+
+func (c Client) GetAPIToken() (string, error) {
+	if _, err := c.GetAPIEndpoint() ; err != nil {
+		return "", err
 	}
 
 	svc := secretsmanager.New(c.Cfg)
@@ -190,12 +198,12 @@ func (c Client) GetAPIToken() error {
 
 			fmt.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
 
 	var secret Secret
 	json.Unmarshal([]byte(*result.SecretString), &secret)
 	c.APIToken = secret.Token
 
-	return nil
+	return c.APIToken, nil
 }
