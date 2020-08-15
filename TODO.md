@@ -1,5 +1,5 @@
-1. [x] Tag based AMI search.
-2. [-] Boot command
+* [x] Tag based AMI search.
+* [-] Boot command
   * [x] join-nodes
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
@@ -23,10 +23,10 @@
     - [ ] cilium
     - [ ] cloud-controller
     - [ ] IRSA
-3. [x] Shell Completion
-4. [ ] Switch from fmt to log (like argonaut)
-5. [x] Util function to calculate subnets
-6. [ ] Cluster Util components ( Create outside of instances )
+* [x] Shell Completion
+* [ ] Switch from fmt to log (like argonaut)
+* [x] Util function to calculate subnets
+* [ ] Cluster Util components ( Create outside of instances )
   * [ ] Node
     - [ ] Secret-Manager
     - [ ] Dynamo
