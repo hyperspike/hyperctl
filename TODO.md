@@ -1,18 +1,18 @@
-1) [x] Tag based AMI search.
-2) [-] Boot command
-  a) [x] join-nodes
+1. [x] Tag based AMI search.
+2. [-] Boot command
+  * [x] join-nodes
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Get token from secrets-manager
     - [x] Join node
-  b) [-] join-masters
+  * [-] join-masters
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [ ] Check for lock
     - [ ] Check for Initialized
     - [ ] Check version
     - [ ] Join ring
-  c) [-] bootstrap-master
+  * [-] bootstrap-master
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [ ] Check for lock in dynamo
@@ -23,17 +23,17 @@
     - [ ] cilium
     - [ ] cloud-controller
     - [ ] IRSA
-3) [x] Shell Completion
-4) [ ] Switch from fmt to log (like argonaut)
-5) [x] Util function to calculate subnets
-6) [ ] Cluster Util components ( Create outside of instances )
-  a) [ ] Node
+3. [x] Shell Completion
+4. [ ] Switch from fmt to log (like argonaut)
+5. [x] Util function to calculate subnets
+6. [ ] Cluster Util components ( Create outside of instances )
+  * [ ] Node
     - [ ] Secret-Manager
     - [ ] Dynamo
     - [ ] ELB
-  b) [ ] Master
+  * [ ] Master
     - [ ] Dynamo
     - [ ] Secret-Manager
-  c) [ ] Auth
+  * [ ] Auth
     - [ ] Roles
     - [ ] S3
