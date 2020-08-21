@@ -24,9 +24,12 @@ type Client struct {
 	APIToken string
 	APICAHash string
 	Role string
+	Region string
+	CIDR   string
+	Instance string
 }
 
-func Init() Client {
+func Init(region, cidr string) Client {
 	// Using the SDK's default configuration, loading additional config
 	// and credentials values from the environment variables, shared
 	// credentials, and shared configuration files
@@ -43,7 +46,9 @@ func Init() Client {
 	sha1_hash := hex.EncodeToString(h.Sum(nil))
 	// Set the AWS Region that the service clients should use
 	c.Id =  strings.Join([]string{"hyperspike", sha1_hash[0:7]},"-")
-	c.Cfg.Region = "us-east-2"
+	c.Cfg.Region = region
+	c.Region = region
+	c.CIDR = cidr
 	c.Ec2 = ec2.New(c.Cfg)
 
 	return c

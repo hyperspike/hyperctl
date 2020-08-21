@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"hyperspike.io/eng/hyperctl/provider/aws"
 )
@@ -15,9 +15,9 @@ func AMI() *cobra.Command {
 		Use: "ami",
 		Short: "print AMIs",
 		Run: func(c *cobra.Command, args []string) {
-			p := aws.Init()
+			p := aws.Init("us-east-2", "")
 			ami, _ := p.SearchAMI("751883444564", map[string]string{"tag:Name":"hyperspike-*"})
-			fmt.Println("the latests AMI is", ami)
+			log.WithFields(log.Fields{"ami": ami}).Info("fetched latest AMI")
 
 		},
 	}

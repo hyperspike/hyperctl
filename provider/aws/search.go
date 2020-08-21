@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"context"
 	"time"
+	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/ec2metadata"
-	"encoding/json"
 )
 
 type Secret struct {
@@ -38,13 +39,9 @@ func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) 
 	result, err := req.Send(context.Background())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				fmt.Println(aerr.Error())
-			}
+			log.Error("Failed to fetch AMI " + aerr.Error())
 		} else {
-
-			fmt.Println(err.Error())
+			log.Error("Failed to fetch AMI " + err.Error())
 		}
 		return "", err
 	}
@@ -86,6 +83,7 @@ func (c Client) ClusterName() string {
 			metadata.InstanceID,
 		},
 	}
+	c.Instance = metadata.InstanceID
 
 	req := c.Ec2.DescribeInstancesRequest(input)
 	result, err := req.Send(context.Background())
@@ -116,6 +114,22 @@ func (c Client) ClusterName() string {
 	}
 	c.Localized = true
 	return c.Id
+}
+
+func (c Client) InstanceID() string {
+	if ! c.Localized {
+		_ = c.ClusterName()
+	}
+	return c.Instance
+}
+func (c Client) IsMaster() bool {
+	if ! c.Localized {
+		_ = c.ClusterName()
+	}
+	if c.Role == "master" {
+		return true
+	}
+	return false
 }
 
 func (c Client) GetAPIEndpoint() (string, error) {
