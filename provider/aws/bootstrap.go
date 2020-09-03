@@ -194,7 +194,7 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
-	ami, _ := c.SearchAMI("751883444564", map[string]string{"tag:Name":"hyperspike-*"})
+	ami, _ := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
 	fwHostA.Reconnect()
