@@ -29,12 +29,20 @@
 * [x] Util function to calculate subnets
 * [ ] Support automated upgrades
 * [ ] set metadata in dynamodb
+  * IP ( auto calculated )
+  * Service subnet ( Optional )
+  * Pod subnet ( Optional )
+  * cluster name ( Optional / Generated )
+  * elb dns ( Calculated )
+  * region ( Calculated )
+  * external dns ( Optional )
 * [ ] support cilium etcd and etcd-operator (optional)
 * [ ] support gitifold (optional)
 * [ ] support ingress (optional, requires )
 * [ ] support CI (optional, requires ingress)
 * [ ] support CD (optional, requires ingress)
 * [ ] support Monitoring (optional, requires ingess)
+* [ ] support Multi-Cluster Mesh (optional)
 * [ ] Cluster Util components ( Create outside of instances )
   * [ ] Node
     - [ ] Secret-Manager

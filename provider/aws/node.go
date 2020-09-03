@@ -21,30 +21,32 @@ import (
 )
 
 type meta struct {
-	endpoint string
-	hash     string
+	endpoint    string
+	hash        string
+	initialized bool
 }
 
 var (
 	defaultLockTtl   = dynalock.LockWithTTL(8 * time.Minute)
 )
 
-func (c Client) Boot() {
+func (c Client) Boot() error {
 
 	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.ClusterName(), "Agent")
 	if c.IsMaster() {
 		err := c.StartMaster(0)
 		if err != nil {
 			log.Error("Failed to start master %v\n", err)
-			return
+			return err
 		}
 	} else {
 		err := c.StartNode()
 		if err != nil {
 			log.Error("Failed to start node %v\n", err)
-			return
+			return err
 		}
 	}
+	return nil
 }
 
 
@@ -87,7 +89,7 @@ func (c Client) StartMaster(count int) error {
 		return err
 	}
 
-	if c.controlPlaneInitialized() {
+	if init, _ := c.controlPlaneInitialized(); init {
 		err := c.JoinMaster()
 		if err != nil {
 			log.Error("master failed to join control plane %v", err)
@@ -188,9 +190,19 @@ func (c Client) UploadClusterMeta(m meta) error {
 	return nil
 }
 
-func (c Client) controlPlaneInitialized() bool {
-
-	return false
+func (c Client) controlPlaneInitialized() (bool, error) {
+	ret, err := c.agentStore.Get(context.Background(), "ClusterMeta")
+	if err != nil {
+		log.Errorf("failed to upload cluster metadata %v", err)
+		return false, err
+	}
+	var m meta
+	err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), &m)
+	if err != nil {
+		log.Errorf("failed to marshal cluster metadata %v", err)
+		return false, err
+	}
+	return m.initialized, nil
 }
 
 func (c Client) JoinMaster() error {
@@ -265,7 +277,7 @@ func (c Client) InitMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.UploadClusterMeta(meta{hash: tokenHash,})
+	err = c.UploadClusterMeta(meta{hash: tokenHash, initialized: true})
 	if err != nil {
 		return err
 	}
