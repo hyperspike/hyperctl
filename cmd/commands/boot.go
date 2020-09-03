@@ -44,14 +44,14 @@ func BootCommand() *cobra.Command {
 				// init
 				var uninitialized bool
 				if (uninitialized) {
-					cmd := exec.Command("sudo", "su", "-c", "kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf")
+					cmd := exec.Command("sudo", "su", "-c", "kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy")
 					err = cmd.Run()
 					if err != nil {
 						log.Error("kubeadm command failed: %v\n", err)
 						os.Exit(1)
 					}
 				} else {
-					cmd := exec.Command("sudo", "su", "-c", "kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight")
+					cmd := exec.Command("sudo", "su", "-c", "kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight --control-plane --certificate-key --ignore-preflight-errors=DirAvailable--var-lib-etcd,DirAvailable--etc-kubernetes-manifests -k ./kustomize")
 					err = cmd.Run()
 					if err != nil {
 						log.Error("kubeadm command failed: %v\n", err)

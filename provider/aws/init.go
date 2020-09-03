@@ -11,6 +11,7 @@ import (
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/wolfeidau/dynalock/v2"
 )
 
 type Client struct {
@@ -21,12 +22,14 @@ type Client struct {
 	Localized bool
 	APIEndpoint string
 	APITokenLocation string
-	APIToken string
-	APICAHash string
-	Role string
-	Region string
-	CIDR   string
-	Instance string
+	APIToken   string
+	APICAHash  string
+	APICertKey string
+	Role       string
+	Region     string
+	CIDR       string
+	Instance   string
+	agentStore dynalock.Store
 }
 
 func Init(region, cidr string) Client {

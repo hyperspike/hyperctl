@@ -8,24 +8,33 @@
   * [-] join-masters
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
-    - [ ] Check for lock
-    - [ ] Check for Initialized
+    - [x] Check for lock
+    - [x] Check for Initialized
     - [ ] Check version
-    - [ ] Join ring
+    - [x] Join ring
   * [-] bootstrap-master
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
-    - [ ] Check for lock in dynamo
-    - [ ] Get lock in dynamo
+    - [x] Check for lock in dynamo
+    - [x] Get lock in dynamo
     - [ ] check initialized-flag
-    - [ ] upload keys to secrets-manager -> this might be better served as a Daemon on the cluster
+    - [x] upload keys to secrets-manager -> this might be better served as a Daemon on the cluster
     - [ ] set initialized-flag in dynamo
     - [ ] cilium
     - [ ] cloud-controller
     - [ ] IRSA
 * [x] Shell Completion
-* [ ] Switch from fmt to log (like argonaut)
+* [-] Switch from fmt to log (like argonaut)
+* [ ] Refactor to add concurrency
 * [x] Util function to calculate subnets
+* [ ] Support automated upgrades
+* [ ] set metadata in dynamodb
+* [ ] support cilium etcd and etcd-operator (optional)
+* [ ] support gitifold (optional)
+* [ ] support ingress (optional, requires )
+* [ ] support CI (optional, requires ingress)
+* [ ] support CD (optional, requires ingress)
+* [ ] support Monitoring (optional, requires ingess)
 * [ ] Cluster Util components ( Create outside of instances )
   * [ ] Node
     - [ ] Secret-Manager

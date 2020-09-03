@@ -15,7 +15,8 @@ import (
 )
 
 type Secret struct {
-	Token string `json:"TOKEN"`
+	token string `json:"TOKEN"`
+	certKey string `json:"CERTKEY"`
 }
 func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) {
 
@@ -132,6 +133,13 @@ func (c Client) IsMaster() bool {
 	return false
 }
 
+type masterData struct {
+	Endpoint      string `json:"apiEndpoint"`
+	TokenLocation string `json:"tokenLocation"`
+	CAHash        string `json:"caHash"`
+	Initialized   bool   `json:"initialized"`
+}
+
 func (c Client) GetAPIEndpoint() (string, error) {
 	if c.APIEndpoint != "" && c.APITokenLocation != "" && c.APICAHash != "" {
 		return c.APIEndpoint, nil
@@ -217,7 +225,19 @@ func (c Client) GetAPIToken() (string, error) {
 
 	var secret Secret
 	json.Unmarshal([]byte(*result.SecretString), &secret)
-	c.APIToken = secret.Token
+	c.APIToken = secret.token
+	c.APICertKey = secret.certKey
 
 	return c.APIToken, nil
+}
+
+func (c Client) GetAPICertKey() (string, error) {
+	if c.APICertKey == "" {
+		_, err := c.GetAPIToken()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return c.APICertKey, nil
 }
