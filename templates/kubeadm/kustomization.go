@@ -1,7 +1,7 @@
 package kubeadm
 
 
-func (c *Conf) Kustomization() string {
+func (c *KubeConf) Kustomization() string {
 	return `---
 patchesJson6902:
 - target:
@@ -13,7 +13,7 @@ patchesJson6902:
 `
 }
 
-func (c *Conf) ApiSecretsProviderYaml() string {
+func (c *KubeConf) ApiSecretsProviderYaml() string {
 	return `---
 - op: add
   path: /spec/containers/0/volumeMounts/-

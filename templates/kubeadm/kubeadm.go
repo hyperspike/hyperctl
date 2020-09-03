@@ -7,7 +7,7 @@ import (
 	"bytes"
 )
 
-type Conf struct {
+type KubeConf struct {
 	IP            string
 	CertKey       string
 	LBDnsPriv     string
@@ -26,12 +26,12 @@ func randomHex(n int) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func New(clusterName string, ip string, region string, lbDnsPriv string, podSubnet string, serviceSubnet string, keyarn string) *Conf {
+func New(clusterName string, ip string, region string, lbDnsPriv string, podSubnet string, serviceSubnet string, keyarn string) *KubeConf {
 	key, err := randomHex(32)
 	if err != nil {
 		return nil
 	}
-	c := &Conf{
+	c := &KubeConf{
 		IP: ip,
 		CertKey: key,
 		LBDnsPriv: lbDnsPriv,
@@ -44,7 +44,7 @@ func New(clusterName string, ip string, region string, lbDnsPriv string, podSubn
 	return c
 }
 
-func (c *Conf) KubeadmYaml() (string, error) {
+func (c *KubeConf) KubeadmYaml() (string, error) {
 
 	var err error
 	kubeadm := template.New("kubeadm")

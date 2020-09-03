@@ -3,7 +3,7 @@ package commands
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"hyperspike.io/eng/hyperctl/provider/aws"
+	"hyperspike.io/hyperctl/provider/aws"
 )
 
 func init() {

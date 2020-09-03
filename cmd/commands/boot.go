@@ -4,7 +4,7 @@ import (
 	"os"
 	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
-	"hyperspike.io/eng/hyperctl/provider/aws"
+	"hyperspike.io/hyperctl/provider/aws"
 )
 
 func init() {

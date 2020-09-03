@@ -6,9 +6,9 @@ import (
 	"net"
 	"strings"
 
-	"hyperspike.io/eng/hyperctl/auth/ssh"
-	"hyperspike.io/eng/hyperctl/bootstrap/bastion"
-	"hyperspike.io/eng/hyperctl/templates/kubeadm"
+	"hyperspike.io/hyperctl/auth/ssh"
+	"hyperspike.io/hyperctl/bootstrap/bastion"
+	"hyperspike.io/hyperctl/templates/kubeadm"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"

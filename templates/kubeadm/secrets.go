@@ -5,7 +5,7 @@ import (
 	"bytes"
 )
 
-func (c *Conf) Secrets() string {
+func (c *KubeConf) Secrets() string {
 	return `---
 apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
@@ -21,7 +21,7 @@ resources:
   - identity: {}
 `
 }
-func (c *Conf) SecretsProvider() (string, error) {
+func (c *KubeConf) SecretsProvider() (string, error) {
 	var err error
 	secrets := template.New("kubeadm")
 	secrets, err = secrets.Parse(`---

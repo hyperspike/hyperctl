@@ -2,7 +2,7 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	"hyperspike.io/eng/hyperctl/cmd/commands"
+	"hyperspike.io/hyperctl/cmd/commands"
 )
 func init() {
 	log.SetFormatter(&log.TextFormatter{

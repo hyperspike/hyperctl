@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
-	"hyperspike.io/eng/hyperctl/provider/aws"
+	"hyperspike.io/hyperctl/provider/aws"
 )
 
 func init() {

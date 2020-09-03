@@ -1,4 +1,4 @@
-module hyperspike.io/eng/hyperctl
+module hyperspike.io/hyperctl
 
 go 1.14
 
