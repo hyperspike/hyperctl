@@ -7,8 +7,11 @@ import (
 	"context"
 	"math/rand"
 	crand "crypto/rand"
+	"os"
 	"os/exec"
 	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
+	"io"
 	"encoding/json"
 	"strings"
 	"regexp"
@@ -33,14 +36,15 @@ var (
 func (c Client) Boot() error {
 
 	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.ClusterName(), "Agent")
+	machineID()
 	if c.IsMaster() {
-		err := c.StartMaster(0)
+		err := c.startMaster(0)
 		if err != nil {
 			log.Error("Failed to start master %v\n", err)
 			return err
 		}
 	} else {
-		err := c.StartNode()
+		err := c.startNode()
 		if err != nil {
 			log.Error("Failed to start node %v\n", err)
 			return err
@@ -50,7 +54,7 @@ func (c Client) Boot() error {
 }
 
 
-func (c Client) StartNode() error {
+func (c Client) startNode() error {
 
 	endpoint, err := c.GetAPIEndpoint()
 	if err != nil {
@@ -75,7 +79,7 @@ func (c Client) StartNode() error {
 	return nil
 }
 
-func (c Client) StartMaster(count int) error {
+func (c Client) startMaster(count int) error {
 
 	agentName := "master/" + c.InstanceID()
 	log.Printf("creating agent: %s", agentName)
@@ -90,7 +94,7 @@ func (c Client) StartMaster(count int) error {
 	}
 
 	if init, _ := c.controlPlaneInitialized(); init {
-		err := c.JoinMaster()
+		err := c.joinMaster()
 		if err != nil {
 			log.Error("master failed to join control plane %v", err)
 			return err
@@ -99,7 +103,7 @@ func (c Client) StartMaster(count int) error {
 		if count >= 35 {
 			return errors.New("Timed out requesting lock")
 		}
-		err := c.StartMaster((count + 1))
+		err := c.startMaster((count + 1))
 		if err != nil {
 			return err
 		}
@@ -112,7 +116,7 @@ func (c Client) StartMaster(count int) error {
 				log.Println("ErrLockAcquireCancelled")
 			}
 			log.Errorf("failed to lock agent: %+v", err)
-			return c.StartMaster((count + 1))
+			return c.startMaster((count + 1))
 		}
 		select {
 			case <-time.After(20 * time.Millisecond):
@@ -123,7 +127,7 @@ func (c Client) StartMaster(count int) error {
 		if err != nil {
 			log.Fatalf("failed to create a new lock on agent: %+v", err)
 		}
-		err = c.InitMaster()
+		err = c.initMaster()
 		if err != nil {
 			log.Error("master failed to create control plane %v", err)
 			return err
@@ -205,7 +209,7 @@ func (c Client) controlPlaneInitialized() (bool, error) {
 	return m.initialized, nil
 }
 
-func (c Client) JoinMaster() error {
+func (c Client) joinMaster() error {
 
 	endpoint, err := c.GetAPIEndpoint()
 	if err != nil {
@@ -235,6 +239,27 @@ func (c Client) JoinMaster() error {
 	return nil
 }
 
+func machineID() error {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		log.Errorf("failed to generate machine id %v", err)
+		return err
+	}
+	file, err := os.Create("/etc/machine-id")
+	if err != nil {
+		log.Errorf("failed to create /etc/machine-id %v", err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, strings.ReplaceAll(id.String(), "-", ""))
+	if err != nil {
+		log.Errorf("failed to write /etc/machine-id", err)
+		return err
+	}
+
+	return file.Sync()
+}
 
 func randomHex(n int) (string, error) {
 	bytes := make([]byte, n)
@@ -248,7 +273,7 @@ func randomHex(n int) (string, error) {
 /*
  * InitMaster is going to be funky as it needs to setup the cluster for things like CNI, AWS-IRSA, etc
  */
-func (c Client) InitMaster() error {
+func (c Client) initMaster() error {
 	// key=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
 	// @TODO Kubeadm commands should probably hook into the Go Module
 	key, err := randomHex(16)

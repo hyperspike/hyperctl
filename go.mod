@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v0.24.0
 	github.com/google/goexpect v0.0.0-20200703111054-623d5ca06f56
 	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f // indirect
+	github.com/google/uuid v1.1.1
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/linode/linodego v0.19.0
@@ -23,5 +24,5 @@ require (
 	google.golang.org/grpc v1.26.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	k8s.io/client-go v0.18.5
+	k8s.io/client-go v0.18.8
 )

@@ -99,6 +99,7 @@ func (c Client) CreateCluster() {
 		return
 	}
 
+	// @TODO get AZs by region search
 	masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, "use2-az1")
 	masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, "use2-az2")
 	masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, "use2-az3")
@@ -161,6 +162,9 @@ func (c Client) CreateCluster() {
 	key := ssh.New(4096)
 	key.WritePrivateKey("bastion")
 	bastionKey := c.key("bastion", key)
+	/* @TODO fix hardcoded AMI
+	 * Move to Edge Nodes with Cilium XDP Load Balancing
+	 */
 	fwA, _ := c.instance(&Instance{name:"Firewall - 1", ami:"ami-008a61f78ba92b950", key:bastionKey, subnet:edgeA, sg:edgeSg, nat: true})
 
 	natRoute := c.routeTable(vpc, fwA.id, "0.0.0.0/0")
@@ -194,6 +198,7 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
+
 	ami, _ := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
@@ -1027,43 +1032,3 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
-
-func (c Client) CreateBucket(name string) (string, error) {
-
-	return "", nil
-}
-
-func (c Client) CreateKey(name string, values *map[string]string) (string, error) {
-
-	return "", nil
-}
-
-func (c Client) CreateRole(name string, role string) (string, error) {
-
-	return "", nil
-}
-
-func (c Client) CreatePolicy(name string, policy string) (string, error) {
-
-	return "", nil
-}
-
-func (c Client) CreateInstancePolicy(name string, role string) (string, error) {
-	return "", nil
-}
-
-func (c Client) AttachPolicy(name string, roles []string, policy string) (string, error) {
-
-	return "", nil
-}
-// IPSec
-
-// Kube Cluster
-
-// Pull KubeConfig
-
-// CAPI - Bootstrap
-
-// Gitifold on mgmt cluster
-
-
