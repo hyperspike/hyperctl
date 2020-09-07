@@ -27,8 +27,8 @@
 * [-] Switch from fmt to log (like argonaut)
 * [ ] Refactor to add concurrency
 * [x] Util function to calculate subnets
-* [ ] Embed version at build time
-* [ ] Create version from git tag
+* [x] Embed version at build time
+* [x] Create version from git tag
 * [ ] Support automated upgrades
 * [ ] set metadata in dynamodb
   * IP ( auto calculated )

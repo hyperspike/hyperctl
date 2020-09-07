@@ -2,9 +2,11 @@ FROM golang:1.15.1-alpine3.12 AS build
 
 COPY ./ $GOPATH/src/hyperspike/hyperctl
 
+ARG VERSION
+
 RUN apk --no-cache add make binutils \
 	&& cd $GOPATH/src/hyperspike/hyperctl \
-	&& make install
+	&& make VERSION=${VERSION} install
 
 
 FROM alpine:3.12.0

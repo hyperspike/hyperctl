@@ -1,15 +1,16 @@
 PREFIX ?= /usr
 DESTDIR ?=
+VERSION ?= $(shell  if [ -z $(git tag --points-at HEAD ) ] ; then git tag --points-at HEAD | cat ; else  git rev-parse --short HEAD|cat ; fi)
+
 
 default: build
-
 
 BINS := hyperctl
 
 .PHONY: hyperctl
 
 $(BINS):
-	go build -v -o $@ ./cmd/
+	go build -v -ldflags "-X hyperspike.io/hyperctl.Version=${VERSION}" -o $@ ./cmd/
 
 build: $(BINS)
 
@@ -18,4 +19,7 @@ install: $(BINS)
 
 .PHONY: container
 container:
-	docker build -t graytshirt/hyperctl:0.1 .
+	docker build --build-arg VERSION=$(VERSION) -t graytshirt/hyperctl:$(VERSION) .
+
+version:
+	@echo "Version: $(VERSION)"
