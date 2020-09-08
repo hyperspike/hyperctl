@@ -1,6 +1,6 @@
 PREFIX ?= /usr
 DESTDIR ?=
-VERSION ?= $(shell  if [ ! -z $(git tag --points-at HEAD ) ] ; then git tag --points-at HEAD | cat ; else  git rev-parse --short HEAD|cat ; fi)
+VERSION ?= $(shell  if [ ! -z $(git tag --points-at HEAD ) ] ; then git tag --points-at HEAD | cat ; fi )
 
 
 default: build
