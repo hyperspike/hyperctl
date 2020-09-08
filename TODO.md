@@ -17,11 +17,11 @@
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock in dynamo
     - [x] Get lock in dynamo
-    - [ ] check initialized-flag
+    - [x] check initialized-flag
     - [x] upload keys to secrets-manager -> this might be better served as a Daemon on the cluster
     - [ ] set initialized-flag in dynamo
     - [ ] cilium
-    - [ ] cloud-controller
+    - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
     - [ ] IRSA
 * [x] Shell Completion
 * [-] Switch from fmt to log (like argonaut)
@@ -44,7 +44,7 @@
 * [ ] support CI (optional, requires ingress)
 * [ ] support CD (optional, requires ingress)
 * [ ] support Monitoring (optional, requires ingess)
-* [ ] support Multi-Cluster Mesh (optional)
+* [ ] support Multi-Cluster Mesh (optional, requires cilium-etcd)
 * [ ] Cluster Util components ( Create outside of instances )
   * [ ] Node
     - [ ] Secret-Manager
