@@ -10,5 +10,5 @@ steps:
 - name: build
   image: golang:1.15.2-alpine3.12
   commands:
-  - go build ./...
+  - make build
 
