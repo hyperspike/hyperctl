@@ -28,6 +28,7 @@ type masterData struct {
 	tokenLocation string `json:"tokenLocation"`
 	caHash        string `json:"caHash"`
 	initialized   bool   `json:"initialized"`
+	service       string `json:"service"`
 }
 
 var (

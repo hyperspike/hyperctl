@@ -30,7 +30,7 @@ type Client struct {
 	agentStore dynalock.Store
 }
 
-func Init(region, cidr string) Client {
+func Init(region, cidr, service string) Client {
 	// Using the SDK's default configuration, loading additional config
 	// and credentials values from the environment variables, shared
 	// credentials, and shared configuration files
@@ -50,6 +50,7 @@ func Init(region, cidr string) Client {
 	c.Cfg.Region = region
 	c.Region = region
 	c.CIDR = cidr
+	c.master.service = service
 	c.Ec2 = ec2.New(c.Cfg)
 
 	return c

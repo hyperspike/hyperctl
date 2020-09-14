@@ -20,7 +20,7 @@ func BootCommand() *cobra.Command {
 		Short: "boot a node into the cluster",
 		Run: func(c *cobra.Command, args []string) {
 			if provider == "aws" {
-				p := aws.Init("", "")
+				p := aws.Init("", "", "")
 				err := p.Boot()
 				if err != nil {
 					os.Exit(1)
