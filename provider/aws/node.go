@@ -23,10 +23,11 @@ import (
 	"github.com/wolfeidau/dynalock/v2"
 )
 
-type meta struct {
-	endpoint    string
-	hash        string
-	initialized bool
+type masterData struct {
+	endpoint      string `json:"apiEndpoint"`
+	tokenLocation string `json:"tokenLocation"`
+	caHash        string `json:"caHash"`
+	initialized   bool   `json:"initialized"`
 }
 
 var (
@@ -144,7 +145,7 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.PutSecretValueInput{
-		SecretId:           aws.String(c.APITokenLocation),
+		SecretId:           aws.String(c.master.tokenLocation),
 		SecretString:       aws.String("{\"TOKEN\":\""+token+"\",\"CERTKEY\":\""+key+"\"}"),
 	}
 
@@ -180,7 +181,7 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 	return nil
 }
 
-func (c Client) UploadClusterMeta(m meta) error {
+func (c Client) uploadClusterMeta(m masterData) error {
 	data, err := json.Marshal(m)
 	if err != nil {
 		log.Errorf("failed to marshal cluster metadata %v", err)
@@ -194,16 +195,24 @@ func (c Client) UploadClusterMeta(m meta) error {
 	return nil
 }
 
-func (c Client) controlPlaneInitialized() (bool, error) {
+func (c Client) controlPlaneMeta() (*masterData, error) {
 	ret, err := c.agentStore.Get(context.Background(), "ClusterMeta")
 	if err != nil {
 		log.Errorf("failed to upload cluster metadata %v", err)
-		return false, err
+		return nil, err
 	}
-	var m meta
-	err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), &m)
+	m := new(masterData)
+	err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), m)
 	if err != nil {
 		log.Errorf("failed to marshal cluster metadata %v", err)
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c Client) controlPlaneInitialized() (bool, error) {
+	m, err := c.controlPlaneMeta()
+	if err != nil {
 		return false, err
 	}
 	return m.initialized, nil
@@ -280,7 +289,9 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+	m, err := c.controlPlaneMeta()
 
+	// template kubeadm conf m.endpoint
 	output, err := runner("sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
 	if err != nil {
 		return err
@@ -302,7 +313,7 @@ func (c Client) initMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.UploadClusterMeta(meta{hash: tokenHash, initialized: true})
+	err = c.uploadClusterMeta(masterData{endpoint: m.endpoint, tokenLocation: m.tokenLocation, caHash: tokenHash, initialized: true})
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -133,58 +132,23 @@ func (c Client) IsMaster() bool {
 	return false
 }
 
-type masterData struct {
-	Endpoint      string `json:"apiEndpoint"`
-	TokenLocation string `json:"tokenLocation"`
-	CAHash        string `json:"caHash"`
-	Initialized   bool   `json:"initialized"`
-}
-
 func (c Client) GetAPIEndpoint() (string, error) {
-	if c.APIEndpoint != "" && c.APITokenLocation != "" && c.APICAHash != "" {
-		return c.APIEndpoint, nil
+	if c.master.endpoint != "" || c.master.tokenLocation != "" || c.master.caHash != "" {
+		return c.master.endpoint, nil
 	}
-	svc := dynamodb.New(c.Cfg)
-	input := &dynamodb.GetItemInput{
-		Key: map[string]dynamodb.AttributeValue{
-			"Role": {
-				S: aws.String("Node"),
-			},
-		},
-		TableName: aws.String(c.ClusterName()),
-	}
-	req := svc.GetItemRequest(input)
-	result, err := req.Send(context.Background())
+	masterData, err := c.controlPlaneMeta()
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-			case dynamodb.ErrCodeRequestLimitExceeded:
-				fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
-			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			fmt.Println(err.Error())
-		}
 		return "", err
 	}
-	c.APIEndpoint      = *result.Item["APIEndpoint"].S
-	c.APITokenLocation = *result.Item["APITokenLocation"].S
-	c.APICAHash        = *result.Item["APICAHash"].S
-	return c.APIEndpoint, nil
+	c.master = *masterData
+	return c.master.endpoint, nil
 }
 
 func (c Client) GetAPICAHash() (string, error) {
 	if _, err := c.GetAPIEndpoint() ; err != nil {
 		return "", err
 	}
-	return c.APICAHash, nil
+	return c.master.caHash, nil
 }
 
 func (c Client) GetAPIToken() (string, error) {
@@ -194,7 +158,7 @@ func (c Client) GetAPIToken() (string, error) {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(c.APITokenLocation),
+		SecretId:     aws.String(c.master.tokenLocation),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 

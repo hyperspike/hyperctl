@@ -20,11 +20,9 @@ type Client struct {
 	Id string
 	Ec2 *ec2.Client
 	Localized bool
-	APIEndpoint string
-	APITokenLocation string
 	APIToken   string
-	APICAHash  string
 	APICertKey string
+	master     masterData
 	Role       string
 	Region     string
 	CIDR       string
