@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"encoding/json"
@@ -36,6 +37,7 @@ func (c Client) AttachPolicy(role, policyArn string) error {
 	req := svc.AttachRolePolicyRequest(input)
 	_, err := req.Send(context.TODO())
 	if err != nil {
+		log.Errorf("Failed to attach role [%s] to policy [%s] [%v]", role, policyArn, err)
 		return err
 	}
 	return nil
@@ -52,6 +54,7 @@ func (c Client) CreatePolicy(name string, p policy) (string, error) {
 	}
 	resp, err := svc.CreatePolicyRequest(input).Send(context.TODO())
 	if err != nil {
+		log.Errorf("Failed to create policy [%s] [%v]", name, err)
 		return "", err
 	}
 	return *resp.Policy.Arn, nil
@@ -91,6 +94,7 @@ func (c Client) CreateRole(name string, r role) (string, error) {
 	}
 	resp, err := svc.CreateRoleRequest(input).Send(context.TODO())
 	if err != nil {
+		log.Errorf("Failed to create role [%s] [%v]", name, err)
 		return "", err
 	}
 	return *resp.Role.Arn, nil

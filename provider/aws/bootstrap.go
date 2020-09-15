@@ -199,6 +199,126 @@ func (c Client) CreateCluster() {
 		"sudo rc-service iptables save",
 	})
 
+	r := role{
+		statement: []roleStatement{
+			{
+				action: "sts:AssumeRole",
+				effect: "Allow",
+				sid:    "",
+				principal: principal{
+					"Service": "ec2.amazonaws.com",
+				},
+			},
+		},
+	}
+	_, err = c.CreateRole("master-"+c.Id, r)
+	if err != nil {
+		return
+	}
+	_, err = c.CreateRole("node-"+c.Id, r)
+	if err != nil {
+		return
+	}
+	mGP := policy{
+		statement: []statement{
+			{
+				action: []string{
+					"ec2:DescribeInstances",
+					"ec2:DescribeRegions",
+					"ec2:DescribeRouteTables",
+					"ec2:DescribeSecurityGroups",
+					"ec2:DescribeSubnets",
+					"ec2:DescribeVolumes",
+					"ec2:CreateSecurityGroup",
+					"ec2:CreateTags",
+					"ec2:CreateVolume",
+					"ec2:ModifyInstanceAttribute",
+					"ec2:ModifyVolume",
+					"ec2:AttachVolume",
+					"ec2:AuthorizeSecurityGroupIngress",
+					"ec2:CreateRoute",
+					"ec2:DeleteRoute",
+					"ec2:DeleteSecurityGroup",
+					"ec2:DeleteVolume",
+					"ec2:DetachVolume",
+					"ec2:RevokeSecurityGroupIngress",
+					"ec2:DescribeVpcs",
+					"elasticloadbalancing:AddTags",
+					"elasticloadbalancing:AttachLoadBalancerToSubnets",
+					"elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+					"elasticloadbalancing:CreateLoadBalancer",
+					"elasticloadbalancing:CreateLoadBalancerPolicy",
+					"elasticloadbalancing:CreateLoadBalancerListeners",
+					"elasticloadbalancing:ConfigureHealthCheck",
+					"elasticloadbalancing:DeleteLoadBalancer",
+					"elasticloadbalancing:DeleteLoadBalancerListeners",
+					"elasticloadbalancing:DescribeLoadBalancers",
+					"elasticloadbalancing:DescribeLoadBalancerAttributes",
+					"elasticloadbalancing:DetachLoadBalancerFromSubnets",
+					"elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+					"elasticloadbalancing:ModifyLoadBalancerAttributes",
+					"elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+					"elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
+					"elasticloadbalancing:AddTags",
+					"elasticloadbalancing:CreateListener",
+					"elasticloadbalancing:CreateTargetGroup",
+					"elasticloadbalancing:DeleteListener",
+					"elasticloadbalancing:DeleteTargetGroup",
+					"elasticloadbalancing:DescribeListeners",
+					"elasticloadbalancing:DescribeLoadBalancerPolicies",
+					"elasticloadbalancing:DescribeTargetGroups",
+					"elasticloadbalancing:DescribeTargetHealth",
+					"elasticloadbalancing:ModifyListener",
+					"elasticloadbalancing:ModifyTargetGroup",
+					"elasticloadbalancing:RegisterTargets",
+					"elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+				},
+				resource: []string{
+					"*",
+				},
+				effect: "Allow",
+			},
+		},
+	}
+	masterPolicy, err := c.CreatePolicy("master-general-"+c.Id, mGP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, masterPolicy)
+	if err != nil {
+		return
+	}
+	nGP := policy{
+		statement: []statement{
+			{
+				action: []string{
+					"ec2:DescribeInstances",
+					"ec2:DescribeRegions",
+				},
+				resource: []string{
+					"*",
+				},
+				effect: "Allow",
+			},
+		},
+	}
+	nodePolicy, err := c.CreatePolicy("node-general-"+c.Id, nGP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, nodePolicy)
+	if err != nil {
+		return
+	}
+	irsaPolicy, err := c.IRSAPolicy("derp")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, irsaPolicy)
+	if err != nil {
+		return
+	}
+
 	ami, _ := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
