@@ -10,25 +10,25 @@ import (
 
 func (c Client) IRSAPolicy(bucketArn string) (string, error) {
 	p := policy{
-		Statement: []statement{
+		statement: []statement{
 			{
-				Effect: "Allow",
-				Action: []string{
+				effect: "Allow",
+				action: []string{
 					"s3:ListBucket",
 				},
-				Resource: []string{
+				resource: []string{
 					bucketArn,
 				},
 			},
 			{
-				Effect: "Allow",
-				Action: []string{
+				effect: "Allow",
+				action: []string{
 					"s3:GetObjectVersion",
 					"s3:PutObject",
 					"s3:PutObjectAcl",
 					"s3:GetObject",
 				},
-				Resource: []string{
+				resource: []string{
 					bucketArn + "/*",
 				},
 			},

@@ -8,18 +8,18 @@ import (
 )
 
 type statement struct {
-	Effect string
-	Action []string
-	Resource []string
+	effect string `json:"Effect"`
+	action []string `json:"Action"`
+	resource []string `json:"Resource"`
 }
 
 type policy struct {
-	Version string
-	Statement []statement
+	version string `json:"Version"`
+	statement []statement `json:"Statement"`
 }
 
 func (p policy) String() string {
-	p.Version = "2012-10-17"
+	p.version = "2012-10-17"
 	b, err := json.Marshal(p)
 	if err != nil {
 		return ""
@@ -55,4 +55,43 @@ func (c Client) CreatePolicy(name string, p policy) (string, error) {
 		return "", err
 	}
 	return *resp.Policy.Arn, nil
+}
+
+type principal map[string]string
+
+type roleStatement struct {
+	action string `json:"Action"`
+	principal principal `json:"Principal"`
+	effect string `json:"Effect"`
+	sid    string `json:"Sid"`
+}
+
+type role struct {
+	version string `json:"Version"`
+	statement []roleStatement `json:"Statement"`
+}
+
+func (r role) String() string {
+	r.version = "2012-10-17"
+	b, err := json.Marshal(r)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func (c Client) CreateRole(name string, r role) (string, error) {
+	svc := iam.New(c.Cfg)
+
+	input := &iam.CreateRoleInput{
+		Description: aws.String(name + " Role"),
+		Path: aws.String("/"),
+		AssumeRolePolicyDocument: aws.String(r.String()),
+		RoleName: aws.String(name),
+	}
+	resp, err := svc.CreateRoleRequest(input).Send(context.TODO())
+	if err != nil {
+		return "", err
+	}
+	return *resp.Role.Arn, nil
 }
