@@ -13,6 +13,7 @@
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock
     - [x] Check for Initialized
+    - [ ] api-server-aws-kms
     - [ ] Check version
     - [x] Join ring
   * [ ] bootstrap-master
@@ -22,10 +23,13 @@
     - [x] Get lock in dynamo
     - [x] check initialized-flag
     - [x] upload keys to secrets-manager -> this might be better served as a Daemon on the cluster
-    - [ ] set initialized-flag in dynamo
+    - [x] set initialized-flag in dynamo
+    - [ ] kubeadm config template
+    - [ ] kustomize template
+    - [ ] api-server-aws-kms
     - [ ] cilium
     - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
-    - [ ] IRSA
+    - [ ] IRSA Upload
 * [x] Shell Completion
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
