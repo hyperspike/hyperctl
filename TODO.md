@@ -80,5 +80,4 @@
   * [ ] support Monitoring (optional, requires ingess)
 * [ ] Terraform provider
 * [ ] cluster-api provider and bootstrap
-* GCP Support
-* 
+* [ ] GCP Support
