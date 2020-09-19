@@ -29,6 +29,10 @@
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
 * [x] Create version from git tag
+* [ ] Support Additional Tags
+* [ ] Track state for destruction
+* [ ] Terraform provider
+* [ ] cluster-api provider and bootstrap
 * [ ] Support automated upgrades
 * [ ] set metadata in dynamodb
   * IP ( auto calculated )
@@ -38,21 +42,26 @@
   * elb dns ( Calculated )
   * region ( Calculated )
   * external dns ( Optional )
-* [ ] support cilium etcd and etcd-operator (optional)
-* [ ] support gitifold (optional)
-* [ ] support ingress (optional, requires )
-* [ ] support CI (optional, requires ingress)
-* [ ] support CD (optional, requires ingress)
-* [ ] support Monitoring (optional, requires ingess)
-* [ ] support Multi-Cluster Mesh (optional, requires cilium-etcd)
+* [ ] Plugins
+  * [ ] support cilium etcd and etcd-operator (optional)
+  * [ ] support Multi-Cluster Mesh (optional, requires cilium-etcd)
+  * [ ] support gitifold (optional)
+  * [ ] support ingress (optional, requires )
+  * [ ] support CI (optional, requires ingress)
+  * [ ] support CD (optional, requires ingress)
+  * [ ] support Monitoring (optional, requires ingess)
 * [ ] Cluster Util components ( Create outside of instances )
+  * [ ] Meta
+    - [ ] Dynamo
+    - [ ] Secret-Manager
   * [ ] Node
-    - [ ] Secret-Manager
-    - [ ] Dynamo
-    - [ ] ELB
+    - [ ] Launch Config
+    - [ ] ASG
   * [ ] Master
-    - [ ] Dynamo
-    - [ ] Secret-Manager
+    - [ ] API-Server secrets kms key
+    - [ ] Launch Config
+    - [ ] ASG
+    - [ ] IRSA S3
+    - [ ] IRSA OpenID IAM
   * [ ] Auth
     - [ ] Roles
-    - [ ] S3
