@@ -1,7 +1,8 @@
 PREFIX ?= /usr
 DESTDIR ?=
 VERSION ?= $(shell  if [ ! -z $$(git tag --points-at HEAD) ] ; then git tag --points-at HEAD|cat ; else  git rev-parse --short HEAD|cat; fi )
-
+REGISTRY ?= graytshirt
+RUNTIME ?= docker
 
 default: build
 
@@ -19,7 +20,11 @@ install: $(BINS)
 
 .PHONY: container
 container:
-	docker build --build-arg VERSION=$(VERSION) -t graytshirt/hyperctl:$(VERSION) .
+	$(RUNTIME) build --build-arg VERSION=$(VERSION) -t $(REGISTRY)/hyperctl:$(VERSION) .
+
+.PHONY: push
+push:
+	$(RUNTIME) push $(REGISTRY)/hyperctl:$(VERSION)
 
 version:
 	@echo "Version: $(VERSION)"

@@ -1,4 +1,4 @@
-FROM golang:1.15.1-alpine3.12 AS build
+FROM golang:1.15.2-alpine3.12 AS build
 
 COPY ./ $GOPATH/src/hyperspike/hyperctl
 
@@ -14,6 +14,9 @@ FROM alpine:3.12.0
 COPY --from=build /usr/bin/hyperctl /usr/bin/hyperctl
 
 RUN apk --no-cache add bash bash-completion \
-	&& echo -e "source /etc/profile\nsource <(hyperctl completion bash)" > ${HOME}/.bashrc
+	&& addgroup -S hyperspike && adduser -S hyperspike -G hyperspike \
+	&& echo -e "source /etc/profile\nsource <(hyperctl completion bash)" > /home/hyperspike/.bashrc
+
+USER hyperspike
 
 CMD /bin/bash

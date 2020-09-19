@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	log "github.com/sirupsen/logrus"
 
 	"hyperspike.io/hyperctl/auth/ssh"
 	"hyperspike.io/hyperctl/bootstrap/bastion"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 )
 
 
@@ -320,12 +322,13 @@ func (c Client) CreateCluster() {
 	}
 
 	ami, _ := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+
 	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
 	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
 	fwHostA.Reconnect()
 	masterHostA.Bastion(fwHostA)
-	elb, _ := c.loadBalancer("Master ELB", masterLbSg, []string{masterA, masterB, masterC})
-	k := kubeadm.New(masterInsA.private, "us-east-2", elb, "hyperspike.east2", podCidr.String(), "172.16.0.0/18", "keyarn")
+	elb, _ := c.loadBalancer("Master ELB "+c.ClusterName(), masterLbSg, []string{masterA, masterB, masterC})
+	k := kubeadm.New(masterInsA.private, c.Region, elb, c.ClusterName() +"."+c.Region, podCidr.String(), c.master.service, "keyarn")
 	kubeadmConf, _ := k.KubeadmYaml()
 	kubeSecrets, _ := k.SecretsProvider()
 	masterHostA.Run([]string{
@@ -1087,6 +1090,47 @@ func (c Client) key(name string, s ssh.Ssh) string {
 
 	fmt.Println(result)
 	return *result.ImportKeyPairOutput.KeyName
+}
+
+func (c Client) createASG() (string, error) {
+
+	return "", nil
+}
+
+func (c Client) createLaunchTemplate() (string, error) {
+
+	return "", nil
+}
+
+func (c Client) attachClusterAPI(lb, asg string) error {
+	svc := autoscaling.New(c.Cfg)
+	input := &autoscaling.AttachLoadBalancersInput{
+		AutoScalingGroupName: aws.String(asg),
+		LoadBalancerNames: []string{
+			lb,
+		},
+	}
+
+	req := svc.AttachLoadBalancersRequest(input)
+	_, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case autoscaling.ErrCodeResourceContentionFault:
+				log.Error(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+			case autoscaling.ErrCodeServiceLinkedRoleFailure:
+				log.Error(autoscaling.ErrCodeServiceLinkedRoleFailure, aerr.Error())
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return err
+	}
+	return nil
 }
 
 func (c Client) loadBalancer(name string, sg string, subnets []string) (string, error){

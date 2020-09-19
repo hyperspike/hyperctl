@@ -74,7 +74,7 @@ apiServer:
     feature-gates: CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true
     encryption-provider-config: /etc/kubernetes/secrets.yaml
     api-audiences: sts.amazonaws.com
-    service-account-issuer: https://s3-{{ .Region }}.amazonaws.com/aws-irsa-oidc-{{ .ClusterName -}}/
+    service-account-issuer: https://s3.{{ .Region }}.amazonaws.com/aws-irsa-oidc-{{ .ClusterName -}}/
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
     kubelet-preferred-address-types: Hostname,InternalDNS
 certificatesDir: /etc/kubernetes/pki
@@ -83,6 +83,10 @@ controlPlaneEndpoint: {{ .LBDnsPriv -}}:6443
 controllerManager:
   extraArgs:
     cloud-provider: external
+    bind-address: 0.0.0.0
+scheduler:
+  extraArgs:
+    bind-address: 0.0.0.0
 dns:
   type: CoreDNS
 etcd:

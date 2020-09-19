@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/wolfeidau/dynalock/v2"
+	"hyperspike.io/hyperctl/templates/kubeadm"
 )
 
 type masterData struct {
@@ -29,6 +30,8 @@ type masterData struct {
 	caHash        string `json:"caHash"`
 	initialized   bool   `json:"initialized"`
 	service       string `json:"service"`
+	pods          string `json:"pods"`
+	keyarn        string `json:"keyarn"`
 }
 
 var (
@@ -292,7 +295,23 @@ func (c Client) initMaster() error {
 	}
 	m, err := c.controlPlaneMeta()
 
-	// template kubeadm conf m.endpoint
+	k := kubeadm.New("derp", c.Region, m.endpoint, c.ClusterName() +"."+c.Region, m.pods, m.service, m.keyarn)
+
+	kubeadmConf, _ := k.KubeadmYaml()
+	file, err := os.Create("kubeadm.conf")
+	if err != nil {
+		log.Errorf("failed to create kubeadm.conf %v", err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, kubeadmConf)
+	if err != nil {
+		log.Errorf("failed to write", err)
+		return err
+	}
+
+	return file.Sync()
 	output, err := runner("sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
 	if err != nil {
 		return err
