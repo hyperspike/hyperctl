@@ -26,6 +26,7 @@
     - [x] set initialized-flag in dynamo
     - [ ] kubeadm config template
     - [ ] kustomize template
+    - [ ] Embed kube client and upload configs
     - [ ] api-server-aws-kms
     - [ ] cilium
     - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )

@@ -1092,9 +1092,48 @@ func (c Client) key(name string, s ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
-func (c Client) createASG() (string, error) {
+func (c Client) createASG(template, subnet, lb string, min, max, desired int64) error {
+	svc := autoscaling.New(c.Cfg)
+	input := &autoscaling.CreateAutoScalingGroupInput{
+		LaunchTemplate: &autoscaling.LaunchTemplateSpecification{
+			LaunchTemplateId: aws.String(template),
+			Version:          aws.String("$Latest"),
+		},
+		MaxInstanceLifetime: aws.Int64(2592000),
+		MaxSize:             aws.Int64(max),
+		MinSize:             aws.Int64(min),
+		DesiredCapacity:     aws.Int64(desired),
+		VPCZoneIdentifier:   aws.String(subnet),
+	}
+	if lb != "" {
+		input.LoadBalancerNames = []string{lb}
+	}
 
-	return "", nil
+	req := svc.CreateAutoScalingGroupRequest(input)
+	_, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case autoscaling.ErrCodeAlreadyExistsFault:
+				log.Error(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
+			case autoscaling.ErrCodeLimitExceededFault:
+				log.Error(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
+			case autoscaling.ErrCodeResourceContentionFault:
+				log.Error(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+			case autoscaling.ErrCodeServiceLinkedRoleFailure:
+				log.Error(autoscaling.ErrCodeServiceLinkedRoleFailure, aerr.Error())
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return err
+	}
+
+	return  nil
 }
 
 func (c Client) createLaunchTemplate() (string, error) {
