@@ -1,5 +1,10 @@
 package kubeadm
 
+import (
+	"io"
+	"os"
+	log "github.com/sirupsen/logrus"
+)
 
 func (c *KubeConf) Kustomization() string {
 	return `---
@@ -11,6 +16,22 @@ patchesJson6902:
     namespace: kube-system
   path: api-secrets-provider.yaml
 `
+}
+func (c *KubeConf) KustomizationFile(fn string) error {
+	file, err := os.Create(fn)
+	if err != nil {
+		log.Errorf("failed to create %s %v", file, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, c.Kustomization())
+	if err != nil {
+		log.Errorf("failed to write %s, %v", file, err)
+		return err
+	}
+
+	return file.Sync()
 }
 
 func (c *KubeConf) ApiSecretsProviderYaml() string {
@@ -26,7 +47,6 @@ func (c *KubeConf) ApiSecretsProviderYaml() string {
   value:
     mountPath: /run/kmsplugin
     name: run-kmsplugin
-
 - op: add
   path: /spec/volumes/-
   value:
@@ -34,7 +54,6 @@ func (c *KubeConf) ApiSecretsProviderYaml() string {
     hostPath:
       path: /run/kmsplugin
       type: DirectoryOrCreate
-
 - op: add
   path: /spec/volumes/-
   value:
@@ -43,4 +62,20 @@ func (c *KubeConf) ApiSecretsProviderYaml() string {
       path: /etc/kubernetes/secrets.yaml
       type: FileOrCreate
 `
+}
+func (c *KubeConf) ApiSecretsProviderFile(fn string) error {
+	file, err := os.Create(fn)
+	if err != nil {
+		log.Errorf("failed to create %s %v", file, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, c.ApiSecretsProviderYaml())
+	if err != nil {
+		log.Errorf("failed to write %s, %v", file, err)
+		return err
+	}
+
+	return file.Sync()
 }

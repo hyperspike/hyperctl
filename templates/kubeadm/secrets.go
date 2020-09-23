@@ -1,8 +1,11 @@
 package kubeadm
 
 import (
+	"io"
+	"os"
 	"text/template"
 	"bytes"
+	log "github.com/sirupsen/logrus"
 )
 
 func (c *KubeConf) Secrets() string {
@@ -21,6 +24,24 @@ resources:
   - identity: {}
 `
 }
+
+func (c *KubeConf) SecretsFile(fn string) error {
+	file, err := os.Create(fn)
+	if err != nil {
+		log.Errorf("failed to create %s %v", file, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, c.Secrets())
+	if err != nil {
+		log.Errorf("failed to write %s, %v", file, err)
+		return err
+	}
+
+	return file.Sync()
+}
+
 func (c *KubeConf) SecretsProvider() (string, error) {
 	var err error
 	secrets := template.New("kubeadm")
@@ -66,4 +87,25 @@ spec:
 		return "", err
 	}
 	return str.String(), nil
+}
+
+func (c *KubeConf) SecretsProviderFile(fn string) error {
+	file, err := os.Create(fn)
+	if err != nil {
+		log.Errorf("failed to create %s %v", file, err)
+		return err
+	}
+	defer file.Close()
+
+	str, err := c.SecretsProvider()
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(file, str)
+	if err != nil {
+		log.Errorf("failed to write %s, %v", file, err)
+		return err
+	}
+
+	return file.Sync()
 }

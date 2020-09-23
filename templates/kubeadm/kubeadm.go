@@ -1,6 +1,9 @@
 package kubeadm
 
 import (
+	"os"
+	"io"
+	log "github.com/sirupsen/logrus"
 	"text/template"
 	"crypto/rand"
 	"encoding/hex"
@@ -145,4 +148,25 @@ udpIdleTimeout: 250ms
 		return "", err
 	}
 	return str.String(), nil
+}
+
+func (c *KubeConf) KubeadmFile(fn string) error {
+	file, err := os.Create(fn)
+	if err != nil {
+		log.Errorf("failed to create %s %v", file, err)
+		return err
+	}
+	defer file.Close()
+
+	str, err := c.KubeadmYaml()
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(file, str)
+	if err != nil {
+		log.Errorf("failed to write %s, %v", file, err)
+		return err
+	}
+
+	return file.Sync()
 }
