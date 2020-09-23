@@ -27,6 +27,7 @@ type Client struct {
 	Region     string
 	CIDR       string
 	Instance   string
+	IP         string
 	agentStore dynalock.Store
 }
 

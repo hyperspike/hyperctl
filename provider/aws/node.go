@@ -244,6 +244,41 @@ func (c Client) joinMaster() error {
 		log.Error("error getting Certificate Key", err)
 		return err
 	}
+	m, err := c.controlPlaneMeta()
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir("/etc/kubernetes", 0755)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+	if err != nil {
+		return err
+	}
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.endpoint, m.pods, m.service, m.keyarn)
+	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
+	if err != nil {
+		return err
+	}
+	err = k.SecretsFile("/etc/kubernetes/secrets.yaml")
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir("kustomize", 0755)
+	if err != nil {
+		return err
+	}
+	err = k.KustomizationFile("kustomize/kustomization.yaml")
+	if err != nil {
+		return err
+	}
+	err = k.KustomizationFile("kustomize/api-secrets-provider.yaml")
+	if err != nil {
+		return err
+	}
 	// @TODO Kubeadm commands should probably hook into the Go Module
 	_, err = runner("sudo kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight --control-plane --certificate-key " + certKey + " --ignore-preflight-errors=DirAvailable--var-lib-etcd,DirAvailable--etc-kubernetes-manifests -k ./kustomize", 5 * time.Minute)
 	if err != nil {
@@ -294,24 +329,44 @@ func (c Client) initMaster() error {
 		return err
 	}
 	m, err := c.controlPlaneMeta()
-
-	k := kubeadm.New("derp", c.Region, m.endpoint, c.ClusterName() +"."+c.Region, m.pods, m.service, m.keyarn)
-
-	kubeadmConf, _ := k.KubeadmYaml()
-	file, err := os.Create("kubeadm.conf")
 	if err != nil {
-		log.Errorf("failed to create kubeadm.conf %v", err)
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.WriteString(file, kubeadmConf)
-	if err != nil {
-		log.Errorf("failed to write", err)
 		return err
 	}
 
-	return file.Sync()
+	err = os.Mkdir("/etc/kubernetes", 0755)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+	if err != nil {
+		return err
+	}
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.endpoint, m.pods, m.service, m.keyarn)
+	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
+	if err != nil {
+		return err
+	}
+	err = k.SecretsFile("/etc/kubernetes/secrets.yaml")
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir("kustomize", 0755)
+	if err != nil {
+		return err
+	}
+	err = k.KustomizationFile("kustomize/kustomization.yaml")
+	if err != nil {
+		return err
+	}
+	err = k.KustomizationFile("kustomize/api-secrets-provider.yaml")
+	if err != nil {
+		return err
+	}
+	err = k.KubeadmFile("kubeadm.conf.yaml")
+	if err != nil {
+		return err
+	}
 	output, err := runner("sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
 	if err != nil {
 		return err

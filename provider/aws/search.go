@@ -112,6 +112,7 @@ func (c Client) ClusterName() string {
 			c.Role = "node"
 		}
 	}
+	c.IP = *result.Reservations[0].Instances[0].NetworkInterfaces[0].PrivateIpAddress
 	c.Localized = true
 	return c.Id
 }
@@ -121,6 +122,12 @@ func (c Client) InstanceID() string {
 		_ = c.ClusterName()
 	}
 	return c.Instance
+}
+func (c Client) InstanceIP() string {
+	if ! c.Localized {
+		_ = c.ClusterName()
+	}
+	return c.IP
 }
 func (c Client) IsMaster() bool {
 	if ! c.Localized {
