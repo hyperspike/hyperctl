@@ -41,7 +41,22 @@ var (
 func (c Client) Boot() error {
 
 	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.ClusterName(), "Agent")
-	machineID()
+	err := machineID()
+	if err != nil {
+		return err
+	}
+	_, err = runner("hostname -f > /etc/hostname", 1 * time.Second)
+	if err != nil {
+		return err
+	}
+	_, err = runner("rc-service hostname restart", 5 * time.Second)
+	if err != nil {
+		return err
+	}
+	_, err = runner("rc-update add kubelet default", 2 * time.Second)
+	if err != nil {
+		return err
+	}
 	if c.IsMaster() {
 		err := c.startMaster(0)
 		if err != nil {
@@ -77,7 +92,7 @@ func (c Client) startNode() error {
 		return err
 	}
 	// @TODO Kubeadm commands should probably hook into the Go Module
-	_, err = runner("sudo kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
+	_, err = runner("kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
 	if err != nil {
 		return err
 	}
@@ -275,12 +290,12 @@ func (c Client) joinMaster() error {
 	if err != nil {
 		return err
 	}
-	err = k.KustomizationFile("kustomize/api-secrets-provider.yaml")
+	err = k.ApiSecretsProviderFile("kustomize/api-secrets-provider.yaml")
 	if err != nil {
 		return err
 	}
 	// @TODO Kubeadm commands should probably hook into the Go Module
-	_, err = runner("sudo kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight --control-plane --certificate-key " + certKey + " --ignore-preflight-errors=DirAvailable--var-lib-etcd,DirAvailable--etc-kubernetes-manifests -k ./kustomize", 5 * time.Minute)
+	_, err = runner("kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight --control-plane --certificate-key " + certKey + " --ignore-preflight-errors=DirAvailable--var-lib-etcd,DirAvailable--etc-kubernetes-manifests -k ./kustomize", 5 * time.Minute)
 	if err != nil {
 		return err
 	}
@@ -359,7 +374,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	err = k.KustomizationFile("kustomize/api-secrets-provider.yaml")
+	err = k.ApiSecretsProviderFile("kustomize/api-secrets-provider.yaml")
 	if err != nil {
 		return err
 	}
@@ -367,12 +382,12 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	output, err := runner("sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
+	output, err := runner("kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
 	if err != nil {
 		return err
 	}
 	// @TODO Kubeadm commands should probably hook into the Go Module
-	token, err  := runner("sudo kubeadm token create --ttl=0 2>/dev/null", 3 * time.Second)
+	token, err  := runner("kubeadm token create --ttl=0 2>/dev/null", 3 * time.Second)
 	if err != nil {
 		return err
 	}
