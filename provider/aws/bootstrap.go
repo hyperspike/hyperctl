@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strings"
 	log "github.com/sirupsen/logrus"
@@ -45,59 +44,59 @@ type Instance struct {
 func (c Client) CreateCluster() {
 	_, vpcCidr, err := net.ParseCIDR("10.20.0.0/16")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
 	vpc := c.vpc(vpcCidr.String())
 	podCidr, err := cidr.Subnet(vpcCidr, 4, 8)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	masterACidr, err := cidr.Subnet(vpcCidr, 8, 140)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	masterBCidr, err := cidr.Subnet(vpcCidr, 8, 141)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	masterCCidr, err := cidr.Subnet(vpcCidr, 8, 142)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	nodeACidr, err := cidr.Subnet(vpcCidr, 6, 32)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	nodeBCidr, err := cidr.Subnet(vpcCidr, 6, 33)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	nodeCCidr, err := cidr.Subnet(vpcCidr, 6, 34)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	edgeACidr, err := cidr.Subnet(vpcCidr, 10, 0)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	edgeBCidr, err := cidr.Subnet(vpcCidr, 10, 1)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	edgeCCidr, err := cidr.Subnet(vpcCidr, 10, 2)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
@@ -368,10 +367,10 @@ func (c Client) tag(ids []string, t map[string]string) {
 	})
 	res, err := tagReq.Send(context.Background())
 	if err != nil {
-		fmt.Printf("Could not create tags for [%s] %v\n", ids[0], err)
+		log.Printf("Could not create tags for [%s] %v\n", ids[0], err)
 		return
 	}
-	fmt.Printf("%v\n", res)
+	log.Printf("%v\n", res)
 }
 
 func (c Client) tagWithName(id string) {
@@ -391,17 +390,17 @@ func (c Client) vpc(cidr string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 				default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
 
-	fmt.Printf("%v\n", result)
+	log.Printf("%v\n", result)
 
 	inputDns := &ec2.ModifyVpcAttributeInput{
 		EnableDnsSupport: &ec2.AttributeBooleanValue{
@@ -416,17 +415,17 @@ func (c Client) vpc(cidr string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
 
-	fmt.Printf("%v\n", resDns)
+	log.Printf("%v\n", resDns)
 
 	inputDns = &ec2.ModifyVpcAttributeInput{
 		EnableDnsHostnames: &ec2.AttributeBooleanValue{
@@ -441,16 +440,16 @@ func (c Client) vpc(cidr string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Printf("%v\n", resDns)
+	log.Printf("%v\n", resDns)
 
 	c.tagWithName(*result.Vpc.VpcId)
 
@@ -471,16 +470,16 @@ func (c Client) subnet(vpc string, cidr string, name string, public bool, az str
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Printf("%v\n", result)
+	log.Printf("%v\n", result)
 
 	if public {
 		mapInput := &ec2.ModifySubnetAttributeInput{
@@ -495,16 +494,16 @@ func (c Client) subnet(vpc string, cidr string, name string, public bool, az str
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				default:
-					fmt.Println(aerr.Error())
+					log.Println(aerr.Error())
 				}
 			} else {
 				// Print the error, cast err to awserr.Error to get the Code and
 				// Message from an error.
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			}
 			return ""
 		}
-		fmt.Printf("%v\n", mapRes)
+		log.Printf("%v\n", mapRes)
 	}
 
 	tags := map[string]string{
@@ -532,17 +531,17 @@ func (c Client) gateway(vpc string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 
 	assocInput := &ec2.AttachInternetGatewayInput{
 		InternetGatewayId: aws.String(*result.InternetGateway.InternetGatewayId),
@@ -555,16 +554,16 @@ func (c Client) gateway(vpc string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Println(res)
+	log.Println(res)
 
 	c.tagWithName(*result.InternetGateway.InternetGatewayId)
 
@@ -582,16 +581,16 @@ func (c Client) nat(subnet string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Println(result)
+	log.Println(result)
 
 	natInput := &ec2.CreateNatGatewayInput{
 		AllocationId: aws.String(*result.AllocateAddressOutput.AllocationId),
@@ -604,16 +603,16 @@ func (c Client) nat(subnet string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Printf("%v\n", natRes)
+	log.Printf("%v\n", natRes)
 
 	stateInput := &ec2.DescribeNatGatewaysInput{
 		NatGatewayIds: []string{*natRes.CreateNatGatewayOutput.NatGateway.NatGatewayId},
@@ -621,7 +620,7 @@ func (c Client) nat(subnet string) string {
 	// stateReq := c.Ec2.DescribeNatGatewaysRequest(stateInput)
 	err = c.Ec2.WaitUntilNatGatewayAvailable(context.Background(), stateInput)
 	if err != nil {
-		fmt.Errorf("failed to wait for bucket exists, %v", err)
+		log.Errorf("failed to wait for nat gateway to exist, %v", err)
 		return ""
 	}
 
@@ -643,16 +642,16 @@ func (c Client) routeTable(vpc string, gateway string, cidr string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Println(result)
+	log.Println(result)
 
 	inputRoute := &ec2.CreateRouteInput{
 		DestinationCidrBlock: aws.String(cidr),
@@ -670,16 +669,16 @@ func (c Client) routeTable(vpc string, gateway string, cidr string) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Println(routeResult)
+	log.Println(routeResult)
 
 	c.tagWithName(*result.RouteTable.RouteTableId)
 	return *result.RouteTable.RouteTableId
@@ -697,17 +696,17 @@ func (c Client) assocRoute(subnet string, table string) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 }
 
 // create security groups and rules
@@ -725,16 +724,16 @@ func (c Client) securityGroup(vpc string, name string, description string) strin
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
-	fmt.Println(result)
+	log.Println(result)
 
 	tags := map[string]string{
 		"Name":              strings.Join([]string{name, c.Id}," "),
@@ -789,17 +788,17 @@ func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir 
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				default:
-					fmt.Println(aerr.Error())
+					log.Println(aerr.Error())
 				}
 			} else {
 				// Print the error, cast err to awserr.Error to get the Code and
 				// Message from an error.
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			}
 			return ""
 		}
 
-		fmt.Println(result)
+		log.Println(result)
 	case Egress:
 		input := &ec2.AuthorizeSecurityGroupEgressInput{
 			GroupId: aws.String(sg),
@@ -812,17 +811,17 @@ func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir 
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				default:
-					fmt.Println(aerr.Error())
+					log.Println(aerr.Error())
 				}
 			} else {
 				// Print the error, cast err to awserr.Error to get the Code and
 				// Message from an error.
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			}
 			return ""
 		}
 
-		fmt.Println(result)
+		log.Println(result)
 	}
 	return ""
 }
@@ -884,12 +883,12 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return nil, err
 	}
@@ -906,12 +905,12 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				default:
-					fmt.Println(aerr.Error())
+					log.Println(aerr.Error())
 				}
 			} else {
 				// Print the error, cast err to awserr.Error to get the Code and
 				// Message from an error.
-				fmt.Println(err.Error())
+				log.Println(err.Error())
 			}
 			return nil, err
 		}
@@ -923,7 +922,7 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 
 	err = c.Ec2.WaitUntilInstanceRunning(context.Background(), stateInput)
 	if err != nil {
-		fmt.Errorf("failed to wait for instance to be running, %v", err)
+		log.Errorf("failed to wait for instance to be running, %v", err)
 		return nil, err
 	}
 
@@ -933,17 +932,17 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return nil, err
 	}
 
-	fmt.Println(res)
+	log.Println(res)
 
 	i.id      = *result.Instances[0].InstanceId
 	if res.DescribeInstancesOutput.Reservations[0].Instances[0].PublicIpAddress != nil {
@@ -975,36 +974,36 @@ func (c Client) kms(name string) (string, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case kms.ErrCodeMalformedPolicyDocumentException:
-				fmt.Println(kms.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+				log.Println(kms.ErrCodeMalformedPolicyDocumentException, aerr.Error())
 			case kms.ErrCodeDependencyTimeoutException:
-				fmt.Println(kms.ErrCodeDependencyTimeoutException, aerr.Error())
+				log.Println(kms.ErrCodeDependencyTimeoutException, aerr.Error())
 			case kms.ErrCodeInvalidArnException:
-				fmt.Println(kms.ErrCodeInvalidArnException, aerr.Error())
+				log.Println(kms.ErrCodeInvalidArnException, aerr.Error())
 			case kms.ErrCodeUnsupportedOperationException:
-				fmt.Println(kms.ErrCodeUnsupportedOperationException, aerr.Error())
+				log.Println(kms.ErrCodeUnsupportedOperationException, aerr.Error())
 			case kms.ErrCodeKMSInternalException:
-				fmt.Println(kms.ErrCodeKMSInternalException, aerr.Error())
+				log.Println(kms.ErrCodeKMSInternalException, aerr.Error())
 			case kms.ErrCodeLimitExceededException:
-				fmt.Println(kms.ErrCodeLimitExceededException, aerr.Error())
+				log.Println(kms.ErrCodeLimitExceededException, aerr.Error())
 			case kms.ErrCodeTagException:
-				fmt.Println(kms.ErrCodeTagException, aerr.Error())
+				log.Println(kms.ErrCodeTagException, aerr.Error())
 			case kms.ErrCodeCustomKeyStoreNotFoundException:
-				fmt.Println(kms.ErrCodeCustomKeyStoreNotFoundException, aerr.Error())
+				log.Println(kms.ErrCodeCustomKeyStoreNotFoundException, aerr.Error())
 			case kms.ErrCodeCustomKeyStoreInvalidStateException:
-				fmt.Println(kms.ErrCodeCustomKeyStoreInvalidStateException, aerr.Error())
+				log.Println(kms.ErrCodeCustomKeyStoreInvalidStateException, aerr.Error())
 			case kms.ErrCodeCloudHsmClusterInvalidConfigurationException:
-				fmt.Println(kms.ErrCodeCloudHsmClusterInvalidConfigurationException, aerr.Error())
+				log.Println(kms.ErrCodeCloudHsmClusterInvalidConfigurationException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return "", err
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 	return *result.KeyMetadata.KeyId, nil
 }
 
@@ -1034,34 +1033,34 @@ func (c Client) secret(name string, key string, secret string) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case secretsmanager.ErrCodeInvalidParameterException:
-				fmt.Println(secretsmanager.ErrCodeInvalidParameterException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeInvalidParameterException, aerr.Error())
 			case secretsmanager.ErrCodeInvalidRequestException:
-				fmt.Println(secretsmanager.ErrCodeInvalidRequestException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeInvalidRequestException, aerr.Error())
 			case secretsmanager.ErrCodeLimitExceededException:
-				fmt.Println(secretsmanager.ErrCodeLimitExceededException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeLimitExceededException, aerr.Error())
 			case secretsmanager.ErrCodeEncryptionFailure:
-				fmt.Println(secretsmanager.ErrCodeEncryptionFailure, aerr.Error())
+				log.Println(secretsmanager.ErrCodeEncryptionFailure, aerr.Error())
 			case secretsmanager.ErrCodeResourceExistsException:
-				fmt.Println(secretsmanager.ErrCodeResourceExistsException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeResourceExistsException, aerr.Error())
 			case secretsmanager.ErrCodeResourceNotFoundException:
-				fmt.Println(secretsmanager.ErrCodeResourceNotFoundException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeResourceNotFoundException, aerr.Error())
 			case secretsmanager.ErrCodeMalformedPolicyDocumentException:
-				fmt.Println(secretsmanager.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+				log.Println(secretsmanager.ErrCodeMalformedPolicyDocumentException, aerr.Error())
 			case secretsmanager.ErrCodeInternalServiceError:
-				fmt.Println(secretsmanager.ErrCodeInternalServiceError, aerr.Error())
+				log.Println(secretsmanager.ErrCodeInternalServiceError, aerr.Error())
 			case secretsmanager.ErrCodePreconditionNotMetException:
-				fmt.Println(secretsmanager.ErrCodePreconditionNotMetException, aerr.Error())
+				log.Println(secretsmanager.ErrCodePreconditionNotMetException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return err
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 
 	return nil
 }
@@ -1078,17 +1077,17 @@ func (c Client) key(name string, s ssh.Ssh) string {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return ""
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 	return *result.ImportKeyPairOutput.KeyName
 }
 
@@ -1197,41 +1196,41 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case elasticloadbalancing.ErrCodeDuplicateAccessPointNameException:
-				fmt.Println(elasticloadbalancing.ErrCodeDuplicateAccessPointNameException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeDuplicateAccessPointNameException, aerr.Error())
 			case elasticloadbalancing.ErrCodeTooManyAccessPointsException:
-				fmt.Println(elasticloadbalancing.ErrCodeTooManyAccessPointsException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeTooManyAccessPointsException, aerr.Error())
 			case elasticloadbalancing.ErrCodeCertificateNotFoundException:
-				fmt.Println(elasticloadbalancing.ErrCodeCertificateNotFoundException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeCertificateNotFoundException, aerr.Error())
 			case elasticloadbalancing.ErrCodeInvalidConfigurationRequestException:
-				fmt.Println(elasticloadbalancing.ErrCodeInvalidConfigurationRequestException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeInvalidConfigurationRequestException, aerr.Error())
 			case elasticloadbalancing.ErrCodeSubnetNotFoundException:
-				fmt.Println(elasticloadbalancing.ErrCodeSubnetNotFoundException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeSubnetNotFoundException, aerr.Error())
 			case elasticloadbalancing.ErrCodeInvalidSubnetException:
-				fmt.Println(elasticloadbalancing.ErrCodeInvalidSubnetException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeInvalidSubnetException, aerr.Error())
 			case elasticloadbalancing.ErrCodeInvalidSecurityGroupException:
-				fmt.Println(elasticloadbalancing.ErrCodeInvalidSecurityGroupException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeInvalidSecurityGroupException, aerr.Error())
 			case elasticloadbalancing.ErrCodeInvalidSchemeException:
-				fmt.Println(elasticloadbalancing.ErrCodeInvalidSchemeException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeInvalidSchemeException, aerr.Error())
 			case elasticloadbalancing.ErrCodeTooManyTagsException:
-				fmt.Println(elasticloadbalancing.ErrCodeTooManyTagsException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeTooManyTagsException, aerr.Error())
 			case elasticloadbalancing.ErrCodeDuplicateTagKeysException:
-				fmt.Println(elasticloadbalancing.ErrCodeDuplicateTagKeysException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeDuplicateTagKeysException, aerr.Error())
 			case elasticloadbalancing.ErrCodeUnsupportedProtocolException:
-				fmt.Println(elasticloadbalancing.ErrCodeUnsupportedProtocolException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeUnsupportedProtocolException, aerr.Error())
 			case elasticloadbalancing.ErrCodeOperationNotPermittedException:
-				fmt.Println(elasticloadbalancing.ErrCodeOperationNotPermittedException, aerr.Error())
+				log.Println(elasticloadbalancing.ErrCodeOperationNotPermittedException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return "", err
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
