@@ -13,7 +13,7 @@
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock
     - [x] Check for Initialized
-    - [ ] api-server-aws-kms
+    - [x] api-server-aws-kms
     - [ ] Check version
     - [x] Join ring
   * [ ] bootstrap-master
@@ -24,10 +24,10 @@
     - [x] check initialized-flag
     - [x] upload keys to secrets-manager -> this might be better served as a Daemon on the cluster
     - [x] set initialized-flag in dynamo
-    - [ ] kubeadm config template
-    - [ ] kustomize template
+    - [x] kubeadm config template
+    - [x] kustomize template
     - [ ] Embed kube client and upload configs
-    - [ ] api-server-aws-kms
+    - [x] api-server-aws-kms
     - [ ] cilium
     - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
     - [ ] IRSA Upload
@@ -63,7 +63,7 @@
 ## Alpha
 
 * [ ] Refactor to add concurrency
-* [ ] Support Additional Tags
+* [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Switch from fmt to log (like argonaut)
