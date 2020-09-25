@@ -5,4 +5,4 @@
 
 Hyperctl is under heavy development, if a feature is missing come back in a few weeks.
 
-To see a view of planned features got to the [TODO Page](TODO.md)
+To see a view of planned features go to the [TODO Page](TODO.md)
