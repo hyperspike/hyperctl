@@ -3,16 +3,28 @@ package aws
 import (
 	"time"
 	"encoding/hex"
-	"errors"
+	//"errors"
+	"github.com/pkg/errors"
 	"context"
 	"math/rand"
 	crand "crypto/rand"
 	"os"
 	"os/exec"
+
+	"crypto"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"io"
+	"io/ioutil"
+
+	jose "gopkg.in/square/go-jose.v2"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/google/uuid"
-	"io"
-	"encoding/json"
 	"strings"
 	"regexp"
 
@@ -436,4 +448,71 @@ func runner(command string, timeout time.Duration) (string, error) {
 	log.Debug("Output:", string(out))
 
 	return string(out), nil
+}
+
+// copied from kubernetes/kubernetes#78502
+func keyIDFromPublicKey(publicKey interface{}) (string, error) {
+	publicKeyDERBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		log.Errorf("failed to serialize public key to DER format: %v", err)
+		return "", err
+	}
+
+	hasher := crypto.SHA256.New()
+	hasher.Write(publicKeyDERBytes)
+	publicKeyDERHash := hasher.Sum(nil)
+
+	keyID := base64.RawURLEncoding.EncodeToString(publicKeyDERHash)
+
+	return keyID, nil
+}
+
+type keyResponse struct {
+	Keys []jose.JSONWebKey `json:"keys"`
+}
+
+func readKey(filename string) (*keyResponse, error) {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, errors.WithMessage(err, "error reading file")
+	}
+
+	block, _ := pem.Decode(content)
+	if block == nil {
+		return nil, errors.Errorf("Error decoding PEM file %s", filename)
+	}
+
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error parsing key content of %s", filename)
+	}
+	switch pubKey.(type) {
+	case *rsa.PublicKey:
+	default:
+		return nil, errors.New("Public key was not RSA")
+	}
+
+	var alg jose.SignatureAlgorithm
+	switch pubKey.(type) {
+	case *rsa.PublicKey:
+		alg = jose.RS256
+	default:
+		log.Errorf("invalid public key type %T, must be *rsa.PrivateKey", pubKey)
+		return nil, errors.New(fmt.Sprintf("invalid public key type %T, must be *rsa.PrivateKey", pubKey))
+	}
+
+	kid, err := keyIDFromPublicKey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []jose.JSONWebKey
+	keys = append(keys, jose.JSONWebKey{
+		Key:       pubKey,
+		KeyID:     kid,
+		Algorithm: string(alg),
+		Use:       "sig",
+	})
+
+	return &keyResponse{Keys: keys}, nil
 }
