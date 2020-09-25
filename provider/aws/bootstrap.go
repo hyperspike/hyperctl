@@ -42,7 +42,7 @@ type Instance struct {
 }
 
 func (c Client) CreateCluster() {
-	_, vpcCidr, err := net.ParseCIDR("10.20.0.0/16")
+	_, vpcCidr, err := net.ParseCIDR(c.CIDR)
 	if err != nil {
 		log.Println(err)
 		return
