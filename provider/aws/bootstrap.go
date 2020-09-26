@@ -9,7 +9,6 @@ import (
 
 	"hyperspike.io/hyperctl/auth/ssh"
 	"hyperspike.io/hyperctl/bootstrap/bastion"
-	"hyperspike.io/hyperctl/templates/kubeadm"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
@@ -322,35 +321,32 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	ami, _ := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+	ami, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+	if err != nil {
+		return
+	}
+	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, "master-"+c.Id, bastionKey, masterSg, "sudo hyperctl boot")
+	if err != nil {
+		return
+	}
+	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, "node-"+c.Id, bastionKey, masterSg, "sudo hyperctl boot")
+	if err != nil {
+		return
+	}
 
-	masterInsA, _ := c.instance(&Instance{name:"Master - 1", ami:ami, key:bastionKey, subnet:masterA, sg:masterSg, root: 40, size: "t3amedium"})
-	masterHostA := bastion.New(masterInsA.private + "/32", 22, key.PrivateKey, "alpine")
-	fwHostA.Reconnect()
-	masterHostA.Bastion(fwHostA)
-	elb, _ := c.loadBalancer("Master ELB "+c.ClusterName(), masterLbSg, []string{masterA, masterB, masterC})
-	k := kubeadm.New(masterInsA.private, c.Region, elb, c.ClusterName() +"."+c.Region, podCidr.String(), c.master.service, "keyarn")
-	kubeadmConf, _ := k.KubeadmYaml()
-	kubeSecrets, _ := k.SecretsProvider()
-	masterHostA.Run([]string{
-		"sudo resize2fs /dev/xvda",
-		"sudo su -c 'uuidgen|tr -d - > /etc/machine-id'",
-		"chmod +x /tmp/init-master.sh",
-		"chmod +x /tmp/up.sh",
-		"sudo su -c 'hostname -f > /etc/hostname'",
-		"sudo rc-service hostname restart",
-		"echo -e '" + kubeadmConf + "' > kubeadm.conf",
-		"echo -e '" + k.Secrets() + "' > secrets.yaml",
-		"echo -e '" + kubeSecrets + "' > aws-encryption-provider.yaml",
-		"sudo mkdir -p /etc/kubernetes/manifests",
-		"sudo cp secrets.yaml /etc/kubernetes",
-		"sudo cp aws-encryption-provider.yaml /etc/kubernetes/manifests",
-		"mkdir kustomize",
-		"echo -e '" + k.Kustomization() + "' > kustomize/kustomization.yaml",
-		"echo -e '" + k.ApiSecretsProviderYaml() + "' > kustomize/api-secrets-provider.yaml",
-		"sudo rc-update add kubelet default",
-		"sudo kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf --upload-certs --skip-phases=preflight,addon/kube-proxy -k kustomize",
+	elb, err := c.loadBalancer("Master ELB "+c.ClusterName(), masterLbSg, []string{masterA, masterB, masterC})
+	if err != nil {
+		return
+	}
+	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
+		"Name": "Master - "+c.Id+" - A",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/master": "1",
 	})
+	if err != nil {
+		return
+	}
 }
 
 func (c Client) tag(ids []string, t map[string]string) {
@@ -1093,18 +1089,28 @@ func (c Client) key(name string, s ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
-func (c Client) createASG(template, subnet, lb string, min, max, desired int64) error {
+func (c Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) error {
 	svc := autoscaling.New(c.Cfg)
+	t := []autoscaling.Tag{}
+	for k, v := range tags {
+		t = append(t, autoscaling.Tag{
+			Key: aws.String(k),
+			Value: aws.String(v),
+			PropagateAtLaunch: aws.Bool(true),
+		})
+	}
 	input := &autoscaling.CreateAutoScalingGroupInput{
+		AutoScalingGroupName: aws.String(name),
 		LaunchTemplate: &autoscaling.LaunchTemplateSpecification{
 			LaunchTemplateName: aws.String(template),
 			Version:            aws.String("$Latest"),
 		},
-		MaxInstanceLifetime: aws.Int64(604800), // 1 week
-		MaxSize:             aws.Int64(max),
-		MinSize:             aws.Int64(min),
-		DesiredCapacity:     aws.Int64(desired),
-		VPCZoneIdentifier:   aws.String(subnet),
+		MaxInstanceLifetime:  aws.Int64(604800), // 1 week
+		MaxSize:              aws.Int64(max),
+		MinSize:              aws.Int64(min),
+		DesiredCapacity:      aws.Int64(desired),
+		VPCZoneIdentifier:    aws.String(subnet),
+		Tags:                 t,
 	}
 	if lb != "" {
 		input.LoadBalancerNames = []string{lb}
