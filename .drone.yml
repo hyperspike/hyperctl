@@ -8,11 +8,11 @@ platform:
 
 steps:
 - name: vet
-  image: graytshirt/golang:0.0.1
+  image: graytshirt/golang:0.0.2
   commands:
   - make vet
 - name: build
-  image: graytshirt/golang:0.0.1
+  image: graytshirt/golang:0.0.2
   commands:
   - make build
 
