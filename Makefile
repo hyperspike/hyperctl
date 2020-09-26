@@ -26,6 +26,10 @@ container:
 push:
 	$(RUNTIME) push $(REGISTRY)/hyperctl:$(VERSION)
 
+.PHONY: vet
+get:
+	go vet ./...
+
 .PHONY: lint
 lint:
 	@hash golangci-lint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
