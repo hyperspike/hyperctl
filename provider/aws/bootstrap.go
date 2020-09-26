@@ -312,14 +312,6 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	irsaPolicy, err := c.IRSAPolicy("derp")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, irsaPolicy)
-	if err != nil {
-		return
-	}
 
 	ami, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	if err != nil {
@@ -338,6 +330,21 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	irsaBucket, err := c.bucket("hyperctl-"+c.Id+"-irsa")
+	if err != nil {
+		return
+	}
+	irsaPolicy, err := c.IRSAPolicy(irsaBucket)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, irsaPolicy)
+	if err != nil {
+		return
+	}
+	// create secret
+	// create dynamodb
+	// upload dynamodb
 	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
@@ -1277,7 +1284,7 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
 
-func (c Client) bucket(name string) (error) {
+func (c Client) bucket(name string) (string, error) {
 	svc := s3.New(c.Cfg)
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(name),
@@ -1304,7 +1311,9 @@ func (c Client) bucket(name string) (error) {
 			// Message from an error.
 			log.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
-	return nil
+	// get bucket
+
+	return "", nil
 }
