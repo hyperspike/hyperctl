@@ -14,8 +14,8 @@ import (
 )
 
 type Secret struct {
-	token string `json:"TOKEN"`
-	certKey string `json:"CERTKEY"`
+	Token string `json:"TOKEN"`
+	CertKey string `json:"CERTKEY"`
 }
 func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) {
 
@@ -140,22 +140,22 @@ func (c Client) IsMaster() bool {
 }
 
 func (c Client) GetAPIEndpoint() (string, error) {
-	if c.master.endpoint != "" || c.master.tokenLocation != "" || c.master.caHash != "" {
-		return c.master.endpoint, nil
+	if c.master.Endpoint != "" || c.master.TokenLocation != "" || c.master.CAHash != "" {
+		return c.master.Endpoint, nil
 	}
 	masterData, err := c.controlPlaneMeta()
 	if err != nil {
 		return "", err
 	}
 	c.master = *masterData
-	return c.master.endpoint, nil
+	return c.master.Endpoint, nil
 }
 
 func (c Client) GetAPICAHash() (string, error) {
 	if _, err := c.GetAPIEndpoint() ; err != nil {
 		return "", err
 	}
-	return c.master.caHash, nil
+	return c.master.CAHash, nil
 }
 
 func (c Client) GetAPIToken() (string, error) {
@@ -165,7 +165,7 @@ func (c Client) GetAPIToken() (string, error) {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(c.master.tokenLocation),
+		SecretId:     aws.String(c.master.TokenLocation),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
@@ -196,8 +196,8 @@ func (c Client) GetAPIToken() (string, error) {
 
 	var secret Secret
 	json.Unmarshal([]byte(*result.SecretString), &secret)
-	c.APIToken = secret.token
-	c.APICertKey = secret.certKey
+	c.APIToken = secret.Token
+	c.APICertKey = secret.CertKey
 
 	return c.APIToken, nil
 }

@@ -51,7 +51,7 @@ func Init(region, cidr, service string) Client {
 	c.Cfg.Region = region
 	c.Region = region
 	c.CIDR = cidr
-	c.master.service = service
+	c.master.Service = service
 	c.Ec2 = ec2.New(c.Cfg)
 
 	return c

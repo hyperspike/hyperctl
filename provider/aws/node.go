@@ -37,13 +37,13 @@ import (
 )
 
 type masterData struct {
-	endpoint      string `json:"apiEndpoint"`
-	tokenLocation string `json:"tokenLocation"`
-	caHash        string `json:"caHash"`
-	initialized   bool   `json:"initialized"`
-	service       string `json:"service"`
-	pods          string `json:"pods"`
-	keyarn        string `json:"keyarn"`
+	Endpoint      string `json:"apiEndpoint"`
+	TokenLocation string `json:"tokenLocation"`
+	CAHash        string `json:"caHash"`
+	Initialized   bool   `json:"initialized"`
+	Service       string `json:"service"`
+	Pods          string `json:"pods"`
+	KeyARN        string `json:"keyarn"`
 }
 
 var (
@@ -176,7 +176,7 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.PutSecretValueInput{
-		SecretId:           aws.String(c.master.tokenLocation),
+		SecretId:           aws.String(c.master.TokenLocation),
 		SecretString:       aws.String("{\"TOKEN\":\""+token+"\",\"CERTKEY\":\""+key+"\"}"),
 	}
 
@@ -246,7 +246,7 @@ func (c Client) controlPlaneInitialized() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return m.initialized, nil
+	return m.Initialized, nil
 }
 
 func (c Client) joinMaster() error {
@@ -284,7 +284,7 @@ func (c Client) joinMaster() error {
 	if err != nil {
 		return err
 	}
-	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.endpoint, m.pods, m.service, m.keyarn)
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
 	if err != nil {
 		return err
@@ -368,7 +368,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.endpoint, m.pods, m.service, m.keyarn)
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
 	if err != nil {
 		return err
@@ -415,7 +415,7 @@ func (c Client) initMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.uploadClusterMeta(masterData{endpoint: m.endpoint, tokenLocation: m.tokenLocation, caHash: tokenHash, initialized: true})
+	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true})
 	if err != nil {
 		return err
 	}
