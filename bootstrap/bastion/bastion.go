@@ -54,7 +54,7 @@ func (h *Host) Connect() error {
 	for {
 		h.Client, err = ssh.Dial("tcp", fmt.Sprintf("%v:%d", h.IP, h.Port), h.Ssh)
 		if err == nil {
-			return nil
+			goto done
 		}
 		time.Sleep(3 * time.Second)
 		if tries > 10 {
@@ -63,7 +63,7 @@ func (h *Host) Connect() error {
 		}
 		tries++
 	}
-	return nil
+	done: return nil
 }
 
 func (h *Host) Bastion(b *Host) error {

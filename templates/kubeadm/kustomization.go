@@ -20,14 +20,14 @@ patchesJson6902:
 func (c *KubeConf) KustomizationFile(fn string) error {
 	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create %s %v", file, err)
+		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
 	defer file.Close()
 
 	_, err = io.WriteString(file, c.Kustomization())
 	if err != nil {
-		log.Errorf("failed to write %s, %v", file, err)
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 
@@ -66,14 +66,14 @@ func (c *KubeConf) ApiSecretsProviderYaml() string {
 func (c *KubeConf) ApiSecretsProviderFile(fn string) error {
 	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create %s %v", file, err)
+		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
 	defer file.Close()
 
 	_, err = io.WriteString(file, c.ApiSecretsProviderYaml())
 	if err != nil {
-		log.Errorf("failed to write %s, %v", file, err)
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 

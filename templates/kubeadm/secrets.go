@@ -28,14 +28,14 @@ resources:
 func (c *KubeConf) SecretsFile(fn string) error {
 	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create %s %v", file, err)
+		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
 	defer file.Close()
 
 	_, err = io.WriteString(file, c.Secrets())
 	if err != nil {
-		log.Errorf("failed to write %s, %v", file, err)
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 
@@ -92,7 +92,7 @@ spec:
 func (c *KubeConf) SecretsProviderFile(fn string) error {
 	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create %s %v", file, err)
+		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
 	defer file.Close()
@@ -103,7 +103,7 @@ func (c *KubeConf) SecretsProviderFile(fn string) error {
 	}
 	_, err = io.WriteString(file, str)
 	if err != nil {
-		log.Errorf("failed to write %s, %v", file, err)
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 

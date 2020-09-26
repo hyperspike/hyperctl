@@ -153,7 +153,7 @@ udpIdleTimeout: 250ms
 func (c *KubeConf) KubeadmFile(fn string) error {
 	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create %s %v", file, err)
+		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
 	defer file.Close()
@@ -164,7 +164,7 @@ func (c *KubeConf) KubeadmFile(fn string) error {
 	}
 	_, err = io.WriteString(file, str)
 	if err != nil {
-		log.Errorf("failed to write %s, %v", file, err)
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 

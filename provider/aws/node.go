@@ -72,13 +72,13 @@ func (c Client) Boot() error {
 	if c.IsMaster() {
 		err := c.startMaster(0)
 		if err != nil {
-			log.Error("Failed to start master %v\n", err)
+			log.Errorf("Failed to start master %v\n", err)
 			return err
 		}
 	} else {
 		err := c.startNode()
 		if err != nil {
-			log.Error("Failed to start node %v\n", err)
+			log.Errorf("Failed to start node %v\n", err)
 			return err
 		}
 	}
@@ -128,7 +128,7 @@ func (c Client) startMaster(count int) error {
 	if init, _ := c.controlPlaneInitialized(); init {
 		err := c.joinMaster()
 		if err != nil {
-			log.Error("master failed to join control plane %v", err)
+			log.Errorf("master failed to join control plane %v", err)
 			return err
 		}
 	} else {
@@ -161,7 +161,7 @@ func (c Client) startMaster(count int) error {
 		}
 		err = c.initMaster()
 		if err != nil {
-			log.Error("master failed to create control plane %v", err)
+			log.Errorf("master failed to create control plane %v", err)
 			return err
 		}
 	}
@@ -329,7 +329,7 @@ func machineID() error {
 
 	_, err = io.WriteString(file, strings.ReplaceAll(id.String(), "-", ""))
 	if err != nil {
-		log.Errorf("failed to write /etc/machine-id", err)
+		log.Errorf("failed to write /etc/machine-id, %v", err)
 		return err
 	}
 
@@ -432,7 +432,7 @@ func runner(command string, timeout time.Duration) (string, error) {
 
 	// This time we can simply use Output() to get the result.
 	out, err := cmd.Output()
-	log.Debug("Running: %s\n", command)
+	log.Debugf("Running: %s\n", command)
 
 	// We want to check the context error to see if the timeout was executed.
 	// The error returned by cmd.Output() will be OS specific based on what
