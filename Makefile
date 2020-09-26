@@ -27,7 +27,7 @@ push:
 	$(RUNTIME) push $(REGISTRY)/hyperctl:$(VERSION)
 
 .PHONY: vet
-get:
+vet:
 	go vet ./...
 
 .PHONY: lint
