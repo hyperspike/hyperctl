@@ -15,4 +15,11 @@ steps:
   image: graytshirt/golang:0.0.4
   commands:
   - make build
+- name: release
+  image: grayshirt/kaniko
+  commands:
+  - /executor
+  when:
+    ref:
+    - refs/tags/**
 
