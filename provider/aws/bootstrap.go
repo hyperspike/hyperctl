@@ -202,12 +202,12 @@ func (c Client) CreateCluster() {
 	})
 
 	r := role{
-		statement: []roleStatement{
+		Statement: []roleStatement{
 			{
-				action: "sts:AssumeRole",
-				effect: "Allow",
-				sid:    "",
-				principal: principal{
+				Action: "sts:AssumeRole",
+				Effect: "Allow",
+				Sid:    "",
+				Principal: principal{
 					"Service": "ec2.amazonaws.com",
 				},
 			},
@@ -222,9 +222,9 @@ func (c Client) CreateCluster() {
 		return
 	}
 	mGP := policy{
-		statement: []statement{
+		Statement: []statement{
 			{
-				action: []string{
+				Action: []string{
 					"ec2:DescribeInstances",
 					"ec2:DescribeRegions",
 					"ec2:DescribeRouteTables",
@@ -275,10 +275,10 @@ func (c Client) CreateCluster() {
 					"elasticloadbalancing:RegisterTargets",
 					"elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
 				},
-				resource: []string{
+				Resource: []string{
 					"*",
 				},
-				effect: "Allow",
+				Effect: "Allow",
 			},
 		},
 	}
@@ -291,16 +291,16 @@ func (c Client) CreateCluster() {
 		return
 	}
 	nGP := policy{
-		statement: []statement{
+		Statement: []statement{
 			{
-				action: []string{
+				Action: []string{
 					"ec2:DescribeInstances",
 					"ec2:DescribeRegions",
 				},
-				resource: []string{
+				Resource: []string{
 					"*",
 				},
-				effect: "Allow",
+				Effect: "Allow",
 			},
 		},
 	}

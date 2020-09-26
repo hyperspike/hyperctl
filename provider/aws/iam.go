@@ -9,18 +9,18 @@ import (
 )
 
 type statement struct {
-	effect string `json:"Effect"`
-	action []string `json:"Action"`
-	resource []string `json:"Resource"`
+	Effect string `json:"Effect"`
+	Action []string `json:"Action"`
+	Resource []string `json:"Resource"`
 }
 
 type policy struct {
-	version string `json:"Version"`
-	statement []statement `json:"Statement"`
+	Version string `json:"Version"`
+	Statement []statement `json:"Statement"`
 }
 
 func (p policy) String() string {
-	p.version = "2012-10-17"
+	p.Version = "2012-10-17"
 	b, err := json.Marshal(p)
 	if err != nil {
 		return ""
@@ -63,19 +63,19 @@ func (c Client) CreatePolicy(name string, p policy) (string, error) {
 type principal map[string]string
 
 type roleStatement struct {
-	action string `json:"Action"`
-	principal principal `json:"Principal"`
-	effect string `json:"Effect"`
-	sid    string `json:"Sid"`
+	Action string `json:"Action"`
+	Principal principal `json:"Principal"`
+	Effect string `json:"Effect"`
+	Sid    string `json:"Sid"`
 }
 
 type role struct {
-	version string `json:"Version"`
-	statement []roleStatement `json:"Statement"`
+	Version string `json:"Version"`
+	Statement []roleStatement `json:"Statement"`
 }
 
 func (r role) String() string {
-	r.version = "2012-10-17"
+	r.Version = "2012-10-17"
 	b, err := json.Marshal(r)
 	if err != nil {
 		return ""
