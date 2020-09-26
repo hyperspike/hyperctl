@@ -7,6 +7,10 @@ platform:
   arch: amd64
 
 steps:
+- name: vet
+  image: graytshirt/golang:0.0.1
+  commands:
+  - make vet
 - name: build
   image: graytshirt/golang:0.0.1
   commands:
