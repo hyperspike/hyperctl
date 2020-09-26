@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"strings"
+	"encoding/base64"
 	log "github.com/sirupsen/logrus"
 
 	"hyperspike.io/hyperctl/auth/ssh"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 )
@@ -1095,10 +1097,10 @@ func (c Client) createASG(template, subnet, lb string, min, max, desired int64) 
 	svc := autoscaling.New(c.Cfg)
 	input := &autoscaling.CreateAutoScalingGroupInput{
 		LaunchTemplate: &autoscaling.LaunchTemplateSpecification{
-			LaunchTemplateId: aws.String(template),
-			Version:          aws.String("$Latest"),
+			LaunchTemplateName: aws.String(template),
+			Version:            aws.String("$Latest"),
 		},
-		MaxInstanceLifetime: aws.Int64(2592000),
+		MaxInstanceLifetime: aws.Int64(604800), // 1 week
 		MaxSize:             aws.Int64(max),
 		MinSize:             aws.Int64(min),
 		DesiredCapacity:     aws.Int64(desired),
@@ -1135,9 +1137,43 @@ func (c Client) createASG(template, subnet, lb string, min, max, desired int64) 
 	return  nil
 }
 
-func (c Client) createLaunchTemplate() (string, error) {
+func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string) (string, error) {
+	svc := autoscaling.New(c.Cfg)
+	input := &autoscaling.CreateLaunchConfigurationInput{
+		IamInstanceProfile:      aws.String(role),
+		ImageId:                 aws.String(ami),
+		InstanceType:            aws.String(size),
+		LaunchConfigurationName: aws.String(name),
+		KeyName:                 aws.String(key),
+		UserData:                aws.String(base64.StdEncoding.EncodeToString([]byte(data))),
+		SecurityGroups: []string{
+			sg,
+		},
+	}
 
-	return "", nil
+	req := svc.CreateLaunchConfigurationRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case autoscaling.ErrCodeAlreadyExistsFault:
+				log.Println(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
+			case autoscaling.ErrCodeLimitExceededFault:
+				log.Println(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
+			case autoscaling.ErrCodeResourceContentionFault:
+				log.Println(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+			default:
+				log.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Println(err.Error())
+		}
+		return "", err
+	}
+
+	return result.String(), nil
 }
 
 func (c Client) attachClusterAPI(lb, asg string) error {
@@ -1233,4 +1269,36 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 	log.Println(result)
 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
+}
+
+func (c Client) bucket(name string) (error) {
+	svc := s3.New(c.Cfg)
+	input := &s3.CreateBucketInput{
+		Bucket: aws.String(name),
+		ACL: s3.BucketCannedACLPublicRead,
+		//CreateBucketConfiguration: s3.CreateBucketConfiguration{
+		//	LocationConstraint:
+		//},
+	}
+
+	req := svc.CreateBucketRequest(input)
+	_, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeBucketAlreadyExists:
+				log.Println(s3.ErrCodeBucketAlreadyExists, aerr.Error())
+			case s3.ErrCodeBucketAlreadyOwnedByYou:
+				log.Println(s3.ErrCodeBucketAlreadyOwnedByYou, aerr.Error())
+			default:
+				log.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Println(err.Error())
+		}
+		return err
+	}
+	return nil
 }
