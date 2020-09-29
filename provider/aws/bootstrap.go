@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"strings"
+	"time"
 	"encoding/base64"
 	log "github.com/sirupsen/logrus"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 
@@ -342,8 +344,18 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	// create secret
-	// create dynamodb
+	kmsKey, err := c.kms(c.Id)
+	if err != nil {
+		return
+	}
+	err = c.secret(c.Id, kmsKey, "")
+	if err != nil {
+		return
+	}
+	err = c.createTable(c.Id)
+	if err != nil {
+		return
+	}
 	// upload dynamodb
 	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
@@ -1026,6 +1038,10 @@ func (c Client) secret(name string, key string, secret string) error {
 				Value: aws.String("owned"),
 			},
 			{
+				Key:   aws.String(strings.Join([]string{"kubernetesCluster", c.Id}, "")),
+				Value: aws.String(c.Id),
+			},
+			{
 				Key:   aws.String("Name"),
 				Value: aws.String(name),
 			},
@@ -1316,4 +1332,106 @@ func (c Client) bucket(name string) (string, error) {
 	// get bucket
 
 	return "", nil
+}
+
+func (c Client) createTable(name string) error {
+	svc := dynamodb.New(c.Cfg)
+	input := &dynamodb.CreateTableInput{
+		AttributeDefinitions: []dynamodb.AttributeDefinition{
+			{
+				AttributeName: aws.String("id"),
+				AttributeType: dynamodb.ScalarAttributeTypeS,
+			},
+			{
+				AttributeName: aws.String("name"),
+				AttributeType: dynamodb.ScalarAttributeTypeS,
+			},
+		},
+		KeySchema: []dynamodb.KeySchemaElement{
+			{
+				AttributeName: aws.String("id"),
+				KeyType:       dynamodb.KeyTypeHash,
+			},
+			{
+				AttributeName: aws.String("name"),
+				KeyType:       dynamodb.KeyTypeRange,
+			},
+		},
+		BillingMode: "PAY_PER_REQUEST",
+		SSESpecification: &dynamodb.SSESpecification{
+			Enabled: aws.Bool(true),
+		},
+		TableName: aws.String(name),
+	}
+
+	req := svc.CreateTableRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeResourceInUseException:
+				log.Println(dynamodb.ErrCodeResourceInUseException, aerr.Error())
+			case dynamodb.ErrCodeLimitExceededException:
+				log.Println(dynamodb.ErrCodeLimitExceededException, aerr.Error())
+			case dynamodb.ErrCodeInternalServerError:
+				log.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+			default:
+				log.Println(aerr.Error())
+			}
+		} else {
+
+			log.Println(err.Error())
+		}
+		return err
+	}
+	log.Println(result)
+	reqS := svc.DescribeTableRequest(&dynamodb.DescribeTableInput{
+			TableName: aws.String(name),
+		})
+	count := 0
+	for {
+		resS, err := reqS.Send(context.Background())
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case dynamodb.ErrCodeResourceNotFoundException:
+					log.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+				case dynamodb.ErrCodeInternalServerError:
+					log.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+				default:
+					log.Println(aerr.Error())
+				}
+			} else {
+				log.Println(err.Error())
+			}
+			return err
+		}
+		status := resS.DescribeTableOutput.Table.TableStatus
+		log.Println(status)
+		if status == dynamodb.TableStatusActive {
+			log.Println("Done")
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+		count++
+		if count > 10 {
+			return err
+		}
+	}
+
+	update := &dynamodb.UpdateTimeToLiveInput{
+		TableName: aws.String(name),
+		TimeToLiveSpecification: &dynamodb.TimeToLiveSpecification{
+			Enabled: aws.Bool(true),
+			AttributeName: aws.String("expires"),
+		},
+	}
+	reqU := svc.UpdateTimeToLiveRequest(update)
+	_, err = reqU.Send(context.Background())
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	// log.Println(res)
+	return nil
 }
