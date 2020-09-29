@@ -11,6 +11,8 @@ To see a view of planned features go to the [TODO Page](TODO.md)
 
 The goal is to create a scalable, secure, bootstrapping mechanism, that reduces friction between AWS and kubernetes clusters.
 
-Hyperctl is an initial deployment mechanism for Hyperspike Kubernetes infrastructure. While terraform, eks, kops, cluster-api and others are decent bootstrapping mechanisms they don't fully capture bootstrapped self hosted kubernetes while maintaining a GitOps audit trail.
+Hyperctl is an initial deployment mechanism for Hyperspike Kubernetes infrastructure. While terraform, eks, [kops](https://github.com/kubernetes/kops), [cluster-api](https://cluster-api.sigs.k8s.io/) and others are decent bootstrapping mechanisms they don't fully capture bootstrapped self hosted kubernetes while maintaining a GitOps audit trail.
 
-The Hyperspike stack includes an Alpine base image, with cri-o container daemon, with crun container runtime. And cilium cni. Which necessitates a custom configured linux kernel for full eBPF support. On aws cilium is setup in ENI mode without kube-proxy.
+The Hyperspike stack includes an [Alpine](https://alpinelinux.org/) base image, with [cri-o](https://github.com/cri-o/cri-o) container daemon, with [crun](https://github.com/containers/crun) container runtime, And [cilium](https://cilium.io/) cni. Which necessitates a custom configured Linux kernel for full eBPF support. On [AWS](https://github.com/aws/amazon-vpc-cni-k8s) cilium is setup in [ENI](https://docs.cilium.io/en/v1.8/concepts/networking/ipam/eni/) mode without [kube-proxy](https://docs.cilium.io/en/v1.8/gettingstarted/kubeproxy-free/).
+
+Hyperctl is designed to work with [Gitifold](https://github.com/hyperspike/gitifold.git) to provide fully a full Infra and Application pipeline.
