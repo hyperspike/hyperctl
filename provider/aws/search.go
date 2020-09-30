@@ -195,7 +195,11 @@ func (c Client) GetAPIToken() (string, error) {
 	}
 
 	var secret Secret
-	json.Unmarshal([]byte(*result.SecretString), &secret)
+	err = json.Unmarshal([]byte(*result.SecretString), &secret)
+	if err != nil {
+		log.Errorf("failed to unmarshall secretString [%s] %v", c.master.TokenLocation, err)
+		return "", err
+	}
 	c.APIToken = secret.Token
 	c.APICertKey = secret.CertKey
 

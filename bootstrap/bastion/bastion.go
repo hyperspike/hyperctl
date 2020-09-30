@@ -3,7 +3,7 @@ package bastion
 import (
 	"net"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"time"
 	"errors"
 	"regexp"
@@ -104,15 +104,23 @@ func (h *Host) Run(commands []string) error {
 	}
 	e, _, err := expect.SpawnSSH(h.Client, timeout)
 	if err != nil {
-		log.Printf("failed to spawn exec ssh %v\n", err)
+		log.Errorf("failed to spawn exec ssh %v\n", err)
 		return err
 	}
 	defer e.Close()
-	e.Expect(promptRe, timeout)
+	_, _, err = e.Expect(promptRe, timeout)
+	if err != nil {
+		log.Errorf("failed to get ssh prompt %v", err)
+		return err
+	}
 
 	var result string
 	for _, cmd := range commands {
-		e.Send(cmd + "\n")
+		err = e.Send(cmd + "\n")
+		if err != nil {
+			log.Errorf("failed to send cmd %s, %v", cmd, err)
+			return err
+		}
 		result, _, _ = e.Expect(promptRe, timeout)
 		log.Printf("%v, %s: %s\n", h.IP, cmd, result)
 	}

@@ -12,7 +12,6 @@ func init() {
 }
 
 var provider string
-var master bool
 
 func BootCommand() *cobra.Command {
 	var bootCmd =  &cobra.Command {

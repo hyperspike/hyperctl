@@ -12,7 +12,10 @@ var rootCmd = &cobra.Command{
 	Long: `Build, configure, and destroy Kubernetes Clusters for yourself.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
-			cmd.Help()
+			err := cmd.Help()
+			if err != nil {
+				os.Exit(1)
+			}
 			os.Exit(0)
 		}
 	},

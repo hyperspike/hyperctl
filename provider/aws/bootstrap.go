@@ -27,7 +27,7 @@ import (
 type Direction string
 const (
 	Ingress Direction = "ingress"
-	Egress = "egress"
+	Egress  Direction = "egress"
 )
 
 type Instance struct {
@@ -1205,6 +1205,7 @@ func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string
 	return result.String(), nil
 }
 
+/* @DEPRECATED mark for removal
 func (c Client) attachClusterAPI(lb, asg string) error {
 	svc := autoscaling.New(c.Cfg)
 	input := &autoscaling.AttachLoadBalancersInput{
@@ -1235,6 +1236,7 @@ func (c Client) attachClusterAPI(lb, asg string) error {
 	}
 	return nil
 }
+*/
 
 func (c Client) loadBalancer(name string, sg string, subnets []string) (string, error){
 	svc := elasticloadbalancing.New(c.Cfg)
