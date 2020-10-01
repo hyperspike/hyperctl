@@ -142,7 +142,7 @@ func (c Client) startMaster(count int) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 12 * time.Second)
 		defer cancel()
 		_, err = lock.Lock(ctx, nil)
-		defer lock.Unlock(context.Background())
+		defer unlock(lock)
 		if err != nil {
 			if err == dynalock.ErrLockAcquireCancelled {
 				log.Println("ErrLockAcquireCancelled")
@@ -167,6 +167,13 @@ func (c Client) startMaster(count int) error {
 	}
 
 	return nil
+}
+
+func unlock(lock dynalock.Locker) {
+	err := lock.Unlock(context.Background())
+	if err != nil {
+		log.Errorf("failed to unlock %err", err)
+	}
 }
 
 func (c Client) UploadBootstrapToken(key, token string) error {
@@ -419,6 +426,10 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+	_, err = readKey("/etc/kubernetes/pki/sa.pub")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -459,7 +470,11 @@ func keyIDFromPublicKey(publicKey interface{}) (string, error) {
 	}
 
 	hasher := crypto.SHA256.New()
-	hasher.Write(publicKeyDERBytes)
+	_, err = hasher.Write(publicKeyDERBytes)
+	if err != nil {
+		log.Errorf("failed to hash x509 %v", err)
+		return "", nil
+	}
 	publicKeyDERHash := hasher.Sum(nil)
 
 	keyID := base64.RawURLEncoding.EncodeToString(publicKeyDERHash)

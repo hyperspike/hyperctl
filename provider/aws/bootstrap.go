@@ -164,7 +164,10 @@ func (c Client) CreateCluster() {
 	c.securityGroupRuleApply(nodeSg, nodeIngress, Ingress)
 
 	key := ssh.New(4096)
-	key.WritePrivateKey("bastion")
+	err = key.WritePrivateKey("bastion")
+	if err != nil {
+		return
+	}
 	bastionKey := c.key("bastion", key)
 	/* @TODO fix hardcoded AMI
 	 * Move to Edge Nodes with Cilium XDP Load Balancing
@@ -179,7 +182,7 @@ func (c Client) CreateCluster() {
 	c.assocRoute(nodeB, natRoute)
 	c.assocRoute(nodeC, natRoute)
 	fwHostA := bastion.New(fwA.public + "/32" , 22, key.PrivateKey, "alpine")
-	fwHostA.Run([]string{
+	err = fwHostA.Run([]string{
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
 		"sudo apk update",
@@ -202,6 +205,9 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
+	if err != nil {
+		return
+	}
 
 	r := role{
 		Statement: []roleStatement{
@@ -587,6 +593,7 @@ func (c Client) gateway(vpc string) string {
 	return *result.InternetGateway.InternetGatewayId
 }
 
+/* @TODO mark nat gateway as deprecated
 func (c Client) nat(subnet string) string {
 	input := &ec2.AllocateAddressInput{
 		Domain: ec2.DomainTypeVpc,
@@ -647,6 +654,7 @@ func (c Client) nat(subnet string) string {
 
 	return *natRes.CreateNatGatewayOutput.NatGateway.NatGatewayId
 }
+*/
 
 func (c Client) routeTable(vpc string, gateway string, cidr string) string {
 	input := &ec2.CreateRouteTableInput{

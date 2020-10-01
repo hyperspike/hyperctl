@@ -11,6 +11,10 @@ steps:
   image: graytshirt/golang:0.0.4
   commands:
   - make vet
+- name: lint
+  image: golangci/golangci-lint:v1.31.0-alpine
+  commands:
+  - golangci-lint run --timeout 5m
 - name: build
   image: graytshirt/golang:0.0.4
   commands:

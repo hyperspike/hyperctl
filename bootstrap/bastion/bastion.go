@@ -124,7 +124,10 @@ func (h *Host) Run(commands []string) error {
 		result, _, _ = e.Expect(promptRe, timeout)
 		log.Printf("%v, %s: %s\n", h.IP, cmd, result)
 	}
-	e.Send("exit\n")
+	err = e.Send("exit\n")
+	if err != nil {
+		log.Errorf("failed to hangup %v", err)
+	}
 	return nil
 }
 
@@ -135,5 +138,8 @@ func (h *Host) Close() {
 
 func (h *Host) Reconnect() {
 	h.Close()
-	h.Connect()
+	err := h.Connect()
+	if err != nil {
+		log.Errorf("failed to re-connect %v", err)
+	}
 }

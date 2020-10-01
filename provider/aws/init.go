@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"io"
 	"time"
 	"strconv"
 	"strings"
@@ -44,7 +45,10 @@ func Init(region, cidr, service string) Client {
 	c.Localized = false
 
 	h := sha1.New()
-	h.Write([]byte(strconv.FormatInt(time.Now().Unix(),10)))
+	_, err = io.WriteString(h, strconv.FormatInt(time.Now().Unix(),10))
+	if err != nil {
+		panic("failed to seed sha1 with epoch " + err.Error())
+	}
 	sha1_hash := hex.EncodeToString(h.Sum(nil))
 	// Set the AWS Region that the service clients should use
 	c.Id =  strings.Join([]string{"hyperspike", sha1_hash[0:7]},"-")
