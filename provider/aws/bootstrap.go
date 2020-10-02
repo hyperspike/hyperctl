@@ -362,6 +362,57 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	tableReadP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"dynamodb:GetItem",
+					"dynomodb:DescribeTable",
+					"dynomodb:DescribeTimeToLive",
+					"dynamodb:Query",
+					"dynamodb:Scan",
+				},
+				Resource: []string{
+					"arn:aws:dynamodb::678557978840:table/"+c.Id,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	tableReadPolicy, err := c.CreatePolicy("dynamo-read-"+c.Id, tableReadP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, tableReadPolicy)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, tableReadPolicy)
+	if err != nil {
+		return
+	}
+	tableWriteP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"dynamodb:PutItem",
+					"dynamodb:UpdateItem",
+				},
+				Resource: []string{
+					"arn:aws:dynamodb::678557978840:table/"+c.Id,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	tableWritePolicy, err := c.CreatePolicy("dynamo-write-"+c.Id, tableWriteP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, tableWritePolicy)
+	if err != nil {
+		return
+	}
 	// upload dynamodb
 	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
