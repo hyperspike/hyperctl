@@ -40,3 +40,7 @@ lint:
 
 version:
 	@echo "Version: $(VERSION)"
+
+clean:
+	rm -f $(BINS)
+	go clean -i -r -cache -testcache -modcache -x
