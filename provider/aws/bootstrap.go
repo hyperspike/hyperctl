@@ -338,7 +338,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	irsaBucket, err := c.bucket("hyperctl-"+c.Id+"-irsa")
+	irsaBucket, err = c.bucket(c.Id+"-irsa")
 	if err != nil {
 		return
 	}
@@ -359,6 +359,57 @@ func (c Client) CreateCluster() {
 		return
 	}
 	err = c.createTable(c.Id)
+	if err != nil {
+		return
+	}
+	tableReadP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"dynamodb:GetItem",
+					"dynomodb:DescribeTable",
+					"dynomodb:DescribeTimeToLive",
+					"dynamodb:Query",
+					"dynamodb:Scan",
+				},
+				Resource: []string{
+					"arn:aws:dynamodb:::table/"+c.Id,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	tableReadPolicy, err := c.CreatePolicy("dynamo-read-"+c.Id, tableReadP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, tableReadPolicy)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, tableReadPolicy)
+	if err != nil {
+		return
+	}
+	tableWriteP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"dynamodb:PutItem",
+					"dynamodb:UpdateItem",
+				},
+				Resource: []string{
+					"arn:aws:dynamodb:::table/"+c.Id,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	tableWritePolicy, err := c.CreatePolicy("dynamo-write-"+c.Id, tableWriteP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, tableWritePolicy)
 	if err != nil {
 		return
 	}
@@ -1321,7 +1372,7 @@ func (c Client) bucket(name string) (string, error) {
 	}
 
 	req := svc.CreateBucketRequest(input)
-	_, err := req.Send(context.Background())
+	res, err := req.Send(context.Background())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -1341,7 +1392,7 @@ func (c Client) bucket(name string) (string, error) {
 	}
 	// get bucket
 
-	return "", nil
+	return "arn:aws:s3:::"+name, nil
 }
 
 func (c Client) createTable(name string) error {
