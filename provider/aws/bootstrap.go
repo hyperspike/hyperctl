@@ -338,7 +338,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	irsaBucket, err = c.bucket(c.Id+"-irsa")
+	irsaBucket, err := c.bucket(c.Id+"-irsa")
 	if err != nil {
 		return
 	}
@@ -1372,7 +1372,7 @@ func (c Client) bucket(name string) (string, error) {
 	}
 
 	req := svc.CreateBucketRequest(input)
-	res, err := req.Send(context.Background())
+	_, err := req.Send(context.Background())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
