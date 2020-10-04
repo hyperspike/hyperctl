@@ -37,25 +37,26 @@
 * [x] Create version from git tag
 * [ ] set metadata in dynamodb
   * IP ( auto calculated )
-  * Service subnet ( Optional )
-  * Pod subnet ( Optional )
-  * cluster name ( Optional / Generated )
-  * elb dns ( Calculated )
-  * region ( Calculated )
+  * [x] Service subnet ( Optional )
+  * [x] Pod subnet ( Optional )
+  * [ ] cluster name ( Optional / Generated )
+  * [x] elb dns ( Calculated )
+  * [x] region ( Calculated )
   * external dns ( Optional )
 * [ ] Cluster Util components ( Create outside of instances )
   * [ ] Meta
-    - [ ] DynamoDB
+    - [x] DynamoDB
     - [ ] Secrets-Manager
-  * [ ] Node
-    - [ ] Launch Config
+  * [x] Node
+    - [x] Launch Config
     - [ ] ASG
   * [ ] Master
-    - [ ] API-Server secrets kms key
-    - [ ] Launch Config
-    - [ ] ASG
-    - [ ] IRSA S3
+    - [x] API-Server secrets kms key
+    - [x] Launch Config
+    - [x] ASG
+    - [x] IRSA S3
     - [ ] IRSA OpenID IAM
+      - [ ] write a quick daemon to perodically update the OpenID cert hash
   * [ ] Auth
     - [ ] Roles
 * [ ] upload admin.conf to secrets-manager, and support fetch to local
