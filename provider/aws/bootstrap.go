@@ -57,6 +57,7 @@ func (c Client) CreateCluster() {
 		log.Println(err)
 		return
 	}
+	c.master.Pods = podCidr.String()
 	masterACidr, err := cidr.Subnet(vpcCidr, 8, 140)
 	if err != nil {
 		log.Println(err)
@@ -339,6 +340,7 @@ func (c Client) CreateCluster() {
 		return
 	}
 	irsaBucket, err := c.bucket(c.Id+"-irsa")
+	c.master.Bucket = irsaBucket
 	if err != nil {
 		return
 	}
@@ -350,7 +352,8 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	kmsKey, err := c.kms(c.Id)
+	var kmsKey string
+	kmsKey, c.master.KeyARN, err = c.kms(c.Id)
 	if err != nil {
 		return
 	}
@@ -358,6 +361,8 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	c.master.TokenLocation = c.Id
+	c.master.Initialized   = false
 	err = c.createTable(c.Id)
 	if err != nil {
 		return
@@ -410,6 +415,11 @@ func (c Client) CreateCluster() {
 		return
 	}
 	err = c.AttachPolicy("master-"+c.Id, tableWritePolicy)
+	if err != nil {
+		return
+	}
+
+	err = c.uploadClusterMeta(c.master)
 	if err != nil {
 		return
 	}
@@ -1029,7 +1039,7 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 	return i, nil
 }
 
-func (c Client) kms(name string) (string, error) {
+func (c Client) kms(name string) (string, string, error) {
 	svc := kms.New(c.Cfg)
 	input := &kms.CreateKeyInput{
 		Tags: []kms.Tag{
@@ -1076,11 +1086,11 @@ func (c Client) kms(name string) (string, error) {
 
 			log.Println(err.Error())
 		}
-		return "", err
+		return "", "", err
 	}
 
 	log.Println(result)
-	return *result.KeyMetadata.KeyId, nil
+	return *result.KeyMetadata.KeyId, *result.KeyMetadata.Arn, nil
 }
 
 func (c Client) secret(name string, key string, secret string) error {
