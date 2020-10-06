@@ -36,17 +36,17 @@
 * [x] Embed version at build time
 * [x] Create version from git tag
 * [ ] set metadata in dynamodb
-  * IP ( auto calculated )
+  * [ ] IP ( auto calculated )
   * [x] Service subnet ( Optional )
   * [x] Pod subnet ( Optional )
-  * [ ] cluster name ( Optional / Generated )
+  * [x] cluster name ( Optional / Generated )
   * [x] elb dns ( Calculated )
   * [x] region ( Calculated )
-  * external dns ( Optional )
+  * [ ] external dns ( Optional )
 * [ ] Cluster Util components ( Create outside of instances )
-  * [ ] Meta
+  * [x] Meta
     - [x] DynamoDB
-    - [ ] Secrets-Manager
+    - [x] Secrets-Manager
   * [x] Node
     - [x] Launch Config
     - [ ] ASG

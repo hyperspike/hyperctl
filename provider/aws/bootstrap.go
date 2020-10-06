@@ -357,12 +357,94 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	err = c.secret(c.Id, kmsKey, "")
+	ebsEncP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"kms:Encrypt",
+					"kms:Decrypt",
+					"kms:ReEncrypt",
+					"kms:GenerateDataKey*",
+					"kms:DescribeKey",
+				},
+				Resource: []string{
+					c.master.KeyARN,
+				},
+				Effect: "Allow",
+			},
+			{
+				Action: []string{
+					"kms:CreateGrant",
+				},
+				Resource: []string{
+					c.master.KeyARN,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	ebsEncryptPolicy, err := c.CreatePolicy("ebs-encrypt-"+c.Id, ebsEncP)
 	if err != nil {
 		return
 	}
-	c.master.TokenLocation = c.Id
-	c.master.Initialized   = false
+	err = c.AttachPolicy("master-"+c.Id, ebsEncryptPolicy)
+	if err != nil {
+		return
+	}
+	secretId, err := c.secret(c.Id, kmsKey, "")
+	if err != nil {
+		return
+	}
+	c.master.TokenLocation = secretId
+	secretReadP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"secretsmanager:GetSecretValue",
+					"secretsmanager:DescribeSecret",
+					"secretsmanager:ListSecretVersionIds",
+				},
+				Resource: []string{
+					secretId,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	secretReadPolicy, err := c.CreatePolicy("secret-read-"+c.Id, secretReadP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, secretReadPolicy)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, secretReadPolicy)
+	if err != nil {
+		return
+	}
+	secretWriteP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"secretsmanager:PutSecretValue",
+					"secretsmanager:UpdateSecret",
+				},
+				Resource: []string{
+					secretId,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	secretWritePolicy, err := c.CreatePolicy("secret-write-"+c.Id, secretWriteP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, secretWritePolicy)
+	if err != nil {
+		return
+	}
 	err = c.createTable(c.Id)
 	if err != nil {
 		return
@@ -1093,7 +1175,7 @@ func (c Client) kms(name string) (string, string, error) {
 	return *result.KeyMetadata.KeyId, *result.KeyMetadata.Arn, nil
 }
 
-func (c Client) secret(name string, key string, secret string) error {
+func (c Client) secret(name string, key string, secret string) (string, error) {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.CreateSecretInput{
@@ -1147,12 +1229,12 @@ func (c Client) secret(name string, key string, secret string) error {
 
 			log.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
 
 	log.Println(result)
 
-	return nil
+	return *result.ARN, nil
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {
