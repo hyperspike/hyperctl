@@ -57,6 +57,7 @@ func (c Client) CreateCluster() {
 		log.Println(err)
 		return
 	}
+	c.master.Pods = podCidr.String()
 	masterACidr, err := cidr.Subnet(vpcCidr, 8, 140)
 	if err != nil {
 		log.Println(err)
@@ -338,7 +339,8 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	irsaBucket, err := c.bucket("hyperctl-"+c.Id+"-irsa")
+	irsaBucket, err := c.bucket(c.Id+"-irsa")
+	c.master.Bucket = irsaBucket
 	if err != nil {
 		return
 	}
@@ -350,11 +352,96 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	kmsKey, err := c.kms(c.Id)
+	var kmsKey string
+	kmsKey, c.master.KeyARN, err = c.kms(c.Id)
 	if err != nil {
 		return
 	}
-	err = c.secret(c.Id, kmsKey, "")
+	ebsEncP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"kms:Encrypt",
+					"kms:Decrypt",
+					"kms:ReEncrypt",
+					"kms:GenerateDataKey*",
+					"kms:DescribeKey",
+				},
+				Resource: []string{
+					c.master.KeyARN,
+				},
+				Effect: "Allow",
+			},
+			{
+				Action: []string{
+					"kms:CreateGrant",
+				},
+				Resource: []string{
+					c.master.KeyARN,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	ebsEncryptPolicy, err := c.CreatePolicy("ebs-encrypt-"+c.Id, ebsEncP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, ebsEncryptPolicy)
+	if err != nil {
+		return
+	}
+	secretId, err := c.secret(c.Id, kmsKey, "")
+	if err != nil {
+		return
+	}
+	c.master.TokenLocation = secretId
+	secretReadP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"secretsmanager:GetSecretValue",
+					"secretsmanager:DescribeSecret",
+					"secretsmanager:ListSecretVersionIds",
+				},
+				Resource: []string{
+					secretId,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	secretReadPolicy, err := c.CreatePolicy("secret-read-"+c.Id, secretReadP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, secretReadPolicy)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, secretReadPolicy)
+	if err != nil {
+		return
+	}
+	secretWriteP := policy{
+		Statement: []statement{
+			{
+				Action: []string{
+					"secretsmanager:PutSecretValue",
+					"secretsmanager:UpdateSecret",
+				},
+				Resource: []string{
+					secretId,
+				},
+				Effect: "Allow",
+			},
+		},
+	}
+	secretWritePolicy, err := c.CreatePolicy("secret-write-"+c.Id, secretWriteP)
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, secretWritePolicy)
 	if err != nil {
 		return
 	}
@@ -373,7 +460,7 @@ func (c Client) CreateCluster() {
 					"dynamodb:Scan",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb::678557978840:table/"+c.Id,
+					"arn:aws:dynamodb:::table/"+c.Id,
 				},
 				Effect: "Allow",
 			},
@@ -399,7 +486,7 @@ func (c Client) CreateCluster() {
 					"dynamodb:UpdateItem",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb::678557978840:table/"+c.Id,
+					"arn:aws:dynamodb:::table/"+c.Id,
 				},
 				Effect: "Allow",
 			},
@@ -413,7 +500,11 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	// upload dynamodb
+
+	err = c.uploadClusterMeta(c.master)
+	if err != nil {
+		return
+	}
 	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
@@ -1029,7 +1120,7 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 	return i, nil
 }
 
-func (c Client) kms(name string) (string, error) {
+func (c Client) kms(name string) (string, string, error) {
 	svc := kms.New(c.Cfg)
 	input := &kms.CreateKeyInput{
 		Tags: []kms.Tag{
@@ -1076,14 +1167,14 @@ func (c Client) kms(name string) (string, error) {
 
 			log.Println(err.Error())
 		}
-		return "", err
+		return "", "", err
 	}
 
 	log.Println(result)
-	return *result.KeyMetadata.KeyId, nil
+	return *result.KeyMetadata.KeyId, *result.KeyMetadata.Arn, nil
 }
 
-func (c Client) secret(name string, key string, secret string) error {
+func (c Client) secret(name string, key string, secret string) (string, error) {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.CreateSecretInput{
@@ -1137,12 +1228,12 @@ func (c Client) secret(name string, key string, secret string) error {
 
 			log.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
 
 	log.Println(result)
 
-	return nil
+	return *result.ARN, nil
 }
 
 func (c Client) key(name string, s ssh.Ssh) string {
@@ -1392,7 +1483,7 @@ func (c Client) bucket(name string) (string, error) {
 	}
 	// get bucket
 
-	return "", nil
+	return "arn:aws:s3:::"+name, nil
 }
 
 func (c Client) createTable(name string) error {

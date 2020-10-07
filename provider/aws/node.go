@@ -44,6 +44,7 @@ type masterData struct {
 	Service       string `json:"service"`
 	Pods          string `json:"pods"`
 	KeyARN        string `json:"keyarn"`
+	Bucket        string `json:"bucket"`
 }
 
 var (
