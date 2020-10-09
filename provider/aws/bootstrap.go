@@ -500,11 +500,11 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-
 	err = c.uploadClusterMeta(c.master)
 	if err != nil {
 		return
 	}
+
 	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
