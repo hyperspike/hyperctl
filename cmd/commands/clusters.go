@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(AMI())
+	rootCmd.AddCommand(Clusters())
 }
 
 func Clusters() *cobra.Command {
