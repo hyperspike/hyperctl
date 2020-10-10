@@ -193,11 +193,12 @@ func (c Client) CreateCluster() {
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
 		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
 		"sudo apk update",
-		"sudo apk add -u openssh iptables suricata",
+		//"sudo apk add -u openssh iptables suricata",
+		"sudo apk add -u openssh iptables",
 		`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
 		"sudo rc-service sshd restart",
-		"sudo rc-update add suricata default",
-		"sudo rc-service suricata start",
+		//"sudo rc-update add suricata default",
+		//"sudo rc-service suricata start",
 		"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
 		"sudo sysctl -p",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
@@ -206,10 +207,10 @@ func (c Client) CreateCluster() {
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
 		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
-		"sudo iptables -I INPUT -j NFQUEUE",
-		"sudo iptables -I OUTPUT -j NFQUEUE",
-		"sudo iptables -t nat -I INPUT -j NFQUEUE",
-		"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
+		//"sudo iptables -I INPUT -j NFQUEUE",
+		//"sudo iptables -I OUTPUT -j NFQUEUE",
+		//"sudo iptables -t nat -I INPUT -j NFQUEUE",
+		//"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
 		"sudo rc-service iptables save",
 	})
 	if err != nil {
@@ -327,6 +328,24 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+
+	_, err = c.instanceProfile("master-"+c.Id)
+	if err != nil {
+		return
+	}
+	_, err = c.instanceProfile("node-"+c.Id)
+	if err != nil {
+		return
+	}
+	err = c.addRoleInstance("master-"+c.Id, "master-"+c.Id)
+	if err != nil {
+		return
+	}
+	err = c.addRoleInstance("node-"+c.Id, "node-"+c.Id)
+	if err != nil {
+		return
+	}
+
 
 	ami, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	if err != nil {
@@ -1129,6 +1148,77 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 
 	return i, nil
 }
+
+func (c Client) instanceProfile(name string) (string, error) {
+	svc := iam.New(c.Cfg)
+	input := &iam.CreateInstanceProfileInput{
+		InstanceProfileName: aws.String(name),
+		Path: aws.String("/"),
+	}
+	req := svc.CreateInstanceProfileRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case iam.ErrCodeEntityAlreadyExistsException:
+				log.Error(iam.ErrCodeEntityAlreadyExistsException, aerr.Error())
+			case iam.ErrCodeLimitExceededException:
+				log.Error(iam.ErrCodeLimitExceededException, aerr.Error())
+			case iam.ErrCodeServiceFailureException:
+				log.Error(iam.ErrCodeServiceFailureException, aerr.Error())
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return "", err
+	}
+
+	log.Info(result)
+
+	return "", nil
+}
+
+func (c Client) addRoleInstance(name, role string) error {
+	svc := iam.New(c.Cfg)
+	input := &iam.AddRoleToInstanceProfileInput{
+		InstanceProfileName: aws.String(name),
+		RoleName:            aws.String(role),
+	}
+
+	req := svc.AddRoleToInstanceProfileRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case iam.ErrCodeNoSuchEntityException:
+				log.Error(iam.ErrCodeNoSuchEntityException, aerr.Error())
+			case iam.ErrCodeEntityAlreadyExistsException:
+				log.Error(iam.ErrCodeEntityAlreadyExistsException, aerr.Error())
+			case iam.ErrCodeLimitExceededException:
+				log.Error(iam.ErrCodeLimitExceededException, aerr.Error())
+			case iam.ErrCodeUnmodifiableEntityException:
+				log.Error(iam.ErrCodeUnmodifiableEntityException, aerr.Error())
+			case iam.ErrCodeServiceFailureException:
+				log.Error(iam.ErrCodeServiceFailureException, aerr.Error())
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return nil
+	}
+
+	log.Info(result)
+	return nil
+}
+
 
 func (c Client) kms(name string) (string, string, error) {
 	svc := kms.New(c.Cfg)

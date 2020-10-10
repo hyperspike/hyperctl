@@ -55,7 +55,7 @@
     - [x] Launch Config
     - [x] ASG
     - [x] IRSA S3
-    - [ ] IRSA OpenID IAM
+    - [x] IRSA OpenID IAM
       - [ ] write a quick daemon to perodically update the OpenID cert hash
   * [ ] Auth
     - [ ] Roles
