@@ -171,11 +171,11 @@ func (c Client) CreateCluster() {
 	c.securityGroupRuleApply(nodeSg, nodeIngress, Ingress)
 
 	key := ssh.New(4096)
-	err = key.WritePrivateKey("bastion")
+	err = key.WritePrivateKey("bastion-"+c.Id)
 	if err != nil {
 		return
 	}
-	bastionKey := c.key("bastion", key)
+	bastionKey := c.key(c.Id, key)
 	/* @TODO fix hardcoded AMI
 	 * Move to Edge Nodes with Cilium XDP Load Balancing
 	 */
@@ -222,7 +222,7 @@ func (c Client) CreateCluster() {
 			{
 				Action: "sts:AssumeRole",
 				Effect: "Allow",
-				Sid:    "",
+				// Sid:    "",
 				Principal: principal{
 					"Service": "ec2.amazonaws.com",
 				},
@@ -329,11 +329,11 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	_, err = c.instanceProfile("master-"+c.Id)
+	masterProfile, err := c.instanceProfile("master-"+c.Id)
 	if err != nil {
 		return
 	}
-	_, err = c.instanceProfile("node-"+c.Id)
+	nodeProfile, err := c.instanceProfile("node-"+c.Id)
 	if err != nil {
 		return
 	}
@@ -351,16 +351,17 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, "master-"+c.Id, bastionKey, masterSg, "sudo hyperctl boot")
+	log.Info("creating launch templates")
+	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, masterProfile, bastionKey, masterSg, "sudo hyperctl boot")
 	if err != nil {
 		return
 	}
-	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, "node-"+c.Id, bastionKey, masterSg, "sudo hyperctl boot")
+	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, nodeProfile, bastionKey, masterSg, "sudo hyperctl boot")
 	if err != nil {
 		return
 	}
 
-	elb, err := c.loadBalancer("Master ELB "+c.ClusterName(), masterLbSg, []string{masterA, masterB, masterC})
+	elb, err := c.loadBalancer("master-lb-"+c.Id, masterLbSg, []string{masterA, masterB, masterC})
 	if err != nil {
 		return
 	}
@@ -1153,7 +1154,6 @@ func (c Client) instanceProfile(name string) (string, error) {
 	svc := iam.New(c.Cfg)
 	input := &iam.CreateInstanceProfileInput{
 		InstanceProfileName: aws.String(name),
-		Path: aws.String("/"),
 	}
 	req := svc.CreateInstanceProfileRequest(input)
 	result, err := req.Send(context.Background())
@@ -1177,9 +1177,37 @@ func (c Client) instanceProfile(name string) (string, error) {
 		return "", err
 	}
 
+	/*
+	inputGet := &iam.GetInstanceProfileInput{
+		InstanceProfileName: aws.String(name),
+	}
+	*/
+
+	/*
+	req := svc.GetInstanceProfileRequest(inputGet)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case iam.ErrCodeNoSuchEntityException:
+				log.Error(iam.ErrCodeNoSuchEntityException, aerr.Error())
+			case iam.ErrCodeServiceFailureException:
+				log.Error(iam.ErrCodeServiceFailureException, aerr.Error())
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return "", nil
+	}
+	*/
+
 	log.Info(result)
 
-	return "", nil
+	return *result.InstanceProfile.InstanceProfileName, nil
 }
 
 func (c Client) addRoleInstance(name, role string) error {
@@ -1430,26 +1458,39 @@ func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string
 		},
 	}
 
-	req := svc.CreateLaunchConfigurationRequest(input)
-	result, err := req.Send(context.Background())
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case autoscaling.ErrCodeAlreadyExistsFault:
-				log.Println(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
-			case autoscaling.ErrCodeLimitExceededFault:
-				log.Println(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
-			case autoscaling.ErrCodeResourceContentionFault:
-				log.Println(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
-			default:
-				log.Println(aerr.Error())
+	result := new(autoscaling.CreateLaunchConfigurationResponse)
+	var err error
+	var count int
+	for {
+		req := svc.CreateLaunchConfigurationRequest(input)
+		result, err = req.Send(context.Background())
+		log.Info(result)
+		if err != nil {
+			log.Errorf("failed to create launch config %v", err)
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case autoscaling.ErrCodeAlreadyExistsFault:
+					log.Error(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
+				case autoscaling.ErrCodeLimitExceededFault:
+					log.Error(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
+				case autoscaling.ErrCodeResourceContentionFault:
+					log.Error(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+				default:
+					log.Error(aerr.Error())
+				}
+			} else {
+				// Print the error, cast err to awserr.Error to get the Code and
+				// Message from an error.
+				log.Error(err.Error())
 			}
+			count++
+			if count > 15 {
+				return "", err
+			}
+			time.Sleep(5 * time.Second)
 		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.Println(err.Error())
+			break
 		}
-		return "", err
 	}
 
 	return result.String(), nil
