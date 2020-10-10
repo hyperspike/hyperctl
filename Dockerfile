@@ -13,7 +13,7 @@ FROM alpine:3.12.0
 
 COPY --from=build /usr/bin/hyperctl /usr/bin/hyperctl
 
-RUN apk --no-cache add bash bash-completion \
+RUN apk --no-cache add bash bash-completion ca-certificates \
 	&& addgroup -S hyperspike && adduser -S hyperspike -G hyperspike \
 	&& echo -e "source /etc/profile\nsource <(hyperctl completion bash)" > /home/hyperspike/.bashrc
 
