@@ -1,6 +1,11 @@
 package aws
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/sha1"
+	"encoding/hex"
+
 	"context"
 	"net"
 	"strings"
@@ -15,6 +20,7 @@ import (
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -341,6 +347,10 @@ func (c Client) CreateCluster() {
 	}
 	irsaBucket, err := c.bucket(c.Id+"-irsa")
 	c.master.Bucket = irsaBucket
+	if err != nil {
+		return
+	}
+	_, err = c.oidcIAM("https://s3.us-east-1.amazonaws.com/"+c.Id+"-irsa/")
 	if err != nil {
 		return
 	}
@@ -1586,4 +1596,80 @@ func (c Client) createTable(name string) error {
 	}
 	// log.Println(res)
 	return nil
+}
+
+func getCert(address string) (*x509.Certificate, error) {
+	conn, err := tls.Dial("tcp", address, &tls.Config{
+		InsecureSkipVerify: false,
+	})
+	if err != nil {
+		log.Errorf("failed to connect to %s %v", address, err)
+		return nil, err
+	}
+	defer conn.Close()
+	/*
+	var b bytes.Buffer
+	for _, cert := range conn.ConnectionState().PeerCertificates {
+		err := pem.Encode(&b, &pem.Block{
+			Type: "CERTIFICATE",
+			Bytes: cert.Raw,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+	return b.String(), nil
+	*/
+	return conn.ConnectionState().PeerCertificates[0], nil
+}
+
+func (c Client) oidcIAM(url string) (string, error) {
+
+	addr := strings.ReplaceAll(url, "https://", "")
+	idx  := strings.IndexAny(addr, "/")
+	if idx > 0 {
+		addr = addr[0:idx]
+	}
+	cert, err := getCert(addr+":443")
+	if err != nil {
+		return "", err
+	}
+	sum := sha1.Sum(cert.Raw)
+	thumb := hex.EncodeToString(sum[:])
+	svc := iam.New(c.Cfg)
+	input := &iam.CreateOpenIDConnectProviderInput{
+		ClientIDList: []string{
+			"sts.amazonaws.com",
+		},
+		ThumbprintList: []string{
+			thumb,
+		},
+		Url: aws.String(url),
+	}
+
+	req := svc.CreateOpenIDConnectProviderRequest(input)
+	result, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case iam.ErrCodeInvalidInputException:
+				log.Println(iam.ErrCodeInvalidInputException, aerr.Error())
+			case iam.ErrCodeEntityAlreadyExistsException:
+				log.Println(iam.ErrCodeEntityAlreadyExistsException, aerr.Error())
+			case iam.ErrCodeLimitExceededException:
+				log.Println(iam.ErrCodeLimitExceededException, aerr.Error())
+			case iam.ErrCodeServiceFailureException:
+				log.Println(iam.ErrCodeServiceFailureException, aerr.Error())
+			default:
+				log.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Println(err.Error())
+		}
+		return "", err
+	}
+
+	return *result.OpenIDConnectProviderArn, nil
 }
