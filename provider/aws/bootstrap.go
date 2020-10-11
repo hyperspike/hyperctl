@@ -539,7 +539,7 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, elb, 1, 1, 1, map[string]string{
+	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
 		"Name": "Master - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
 		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
