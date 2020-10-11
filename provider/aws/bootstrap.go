@@ -363,7 +363,7 @@ func (c Client) CreateCluster() {
 	}
 
 	log.Info("creating master load balancer")
-	elb, err := c.loadBalancer("master-lb-"+c.Id, masterLbSg, []string{masterA, masterB, masterC})
+	c.master.Endpoint, err = c.loadBalancer("master-lb-"+c.Id, masterLbSg, []string{masterA, masterB, masterC})
 	if err != nil {
 		return
 	}
