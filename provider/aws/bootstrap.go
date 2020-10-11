@@ -1462,7 +1462,7 @@ func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string
 		},
 	}
 
-	result := new(autoscaling.CreateLaunchConfigurationResponse)
+	var result *autoscaling.CreateLaunchConfigurationResponse
 	var err error
 	var count int
 	for {
