@@ -1405,17 +1405,14 @@ func (c Client) createASG(name, template, subnet, lb string, min, max, desired i
 		})
 	}
 	input := &autoscaling.CreateAutoScalingGroupInput{
-		AutoScalingGroupName: aws.String(name),
-		LaunchTemplate: &autoscaling.LaunchTemplateSpecification{
-			LaunchTemplateName: aws.String(template),
-			Version:            aws.String("$Latest"),
-		},
-		MaxInstanceLifetime:  aws.Int64(604800), // 1 week
-		MaxSize:              aws.Int64(max),
-		MinSize:              aws.Int64(min),
-		DesiredCapacity:      aws.Int64(desired),
-		VPCZoneIdentifier:    aws.String(subnet),
-		Tags:                 t,
+		AutoScalingGroupName:    aws.String(name),
+		LaunchConfigurationName: aws.String(template),
+		MaxInstanceLifetime:     aws.Int64(604800), // 1 week
+		MaxSize:                 aws.Int64(max),
+		MinSize:                 aws.Int64(min),
+		DesiredCapacity:         aws.Int64(desired),
+		VPCZoneIdentifier:       aws.String(subnet),
+		Tags:                    t,
 	}
 	if lb != "" {
 		input.LoadBalancerNames = []string{lb}
