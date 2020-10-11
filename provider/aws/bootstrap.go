@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/wolfeidau/dynalock/v2"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
@@ -361,16 +362,18 @@ func (c Client) CreateCluster() {
 		return
 	}
 
+	log.Info("creating master load balancer")
 	elb, err := c.loadBalancer("master-lb-"+c.Id, masterLbSg, []string{masterA, masterB, masterC})
 	if err != nil {
 		return
 	}
+	log.Info("creating IRSA OIDC s3 bucket")
 	irsaBucket, err := c.bucket(c.Id+"-irsa")
 	c.master.Bucket = irsaBucket
 	if err != nil {
 		return
 	}
-	_, err = c.oidcIAM("https://s3.us-east-1.amazonaws.com/"+c.Id+"-irsa/")
+	_, err = c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
 	if err != nil {
 		return
 	}
@@ -421,7 +424,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	secretId, err := c.secret(c.Id, kmsKey, "")
+	secretId, err := c.secret(c.Id, kmsKey, "{}")
 	if err != nil {
 		return
 	}
@@ -530,6 +533,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
 	err = c.uploadClusterMeta(c.master)
 	if err != nil {
 		return

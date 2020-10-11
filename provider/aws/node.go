@@ -37,14 +37,14 @@ import (
 )
 
 type masterData struct {
-	Endpoint      string `json:"apiEndpoint"`
-	TokenLocation string `json:"tokenLocation"`
-	CAHash        string `json:"caHash"`
-	Initialized   bool   `json:"initialized"`
-	Service       string `json:"service"`
-	Pods          string `json:"pods"`
-	KeyARN        string `json:"keyarn"`
-	Bucket        string `json:"bucket"`
+	Endpoint      string `json:"apiEndpoint,omitempty"`
+	TokenLocation string `json:"tokenLocation,omitempty"`
+	CAHash        string `json:"caHash,omitempty"`
+	Initialized   bool   `json:"initialized,omitempty"`
+	Service       string `json:"service,omitempty"`
+	Pods          string `json:"pods,omitempty"`
+	KeyARN        string `json:"keyarn,omitempty"`
+	Bucket        string `json:"bucket,omitempty"`
 }
 
 var (

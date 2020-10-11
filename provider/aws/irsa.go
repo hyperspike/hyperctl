@@ -34,7 +34,7 @@ func (c Client) IRSAPolicy(bucketArn string) (string, error) {
 			},
 		},
 	}
-	arn, err := c.CreatePolicy("irsa-upload-" + c.ClusterName(), p)
+	arn, err := c.CreatePolicy("irsa-upload-" + c.Id, p)
 	if err != nil {
 		return "", err
 	}
