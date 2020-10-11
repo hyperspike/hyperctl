@@ -1,4 +1,8 @@
 
+## Current Status
+
+* All command components for MVP have been created and tested. Cluster creation and joining need to be tested. Also cluster upload needs to be tested.
+
 ## MVP
 
 * [x] Tag based AMI search.
