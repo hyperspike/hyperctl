@@ -96,7 +96,7 @@ etcd:
   local:
     dataDir: /var/lib/etcd
 imageRepository: k8s.gcr.io
-kubernetesVersion: v1.18.8
+kubernetesVersion: v1.18.9
 networking:
   dnsDomain: {{ .ClusterName }}
   serviceSubnet: {{ .ServiceSubnet }}
