@@ -548,6 +548,15 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	err = c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA, "", 1, 1, 1, map[string]string{
+		"Name": "Node - "+c.Id+" - A",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/node": "1",
+	})
+	if err != nil {
+		return
+	}
 }
 
 func (c Client) tag(ids []string, t map[string]string) {
