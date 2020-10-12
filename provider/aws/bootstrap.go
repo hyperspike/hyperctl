@@ -1459,6 +1459,15 @@ func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string
 	input := &autoscaling.CreateLaunchConfigurationInput{
 		IamInstanceProfile:      aws.String(role),
 		ImageId:                 aws.String(ami),
+		BlockDeviceMappings:     []autoscaling.BlockDeviceMapping{
+			{
+				DeviceName: aws.String("/dev/xvda"),
+				Ebs: &autoscaling.Ebs{
+					VolumeSize: aws.Int64(80),
+					VolumeType: aws.String("gp2"),
+				},
+			},
+		},
 		InstanceType:            aws.String(size),
 		LaunchConfigurationName: aws.String(name),
 		KeyName:                 aws.String(key),
