@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
-	"os"
+	/* "os"
 	// "strings"
 	// "regexp"
 	// log "github.com/sirupsen/logrus"
@@ -12,7 +12,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"log"
-	"net/http"
+	"net/http" */
 )
 
 func init() {
@@ -23,6 +23,7 @@ var destroyCmd =  &cobra.Command {
 	Use: "destroy",
 	Short: "Destroy A Linode LKE Cluster",
 	Run: func(c *cobra.Command, args []string) {
+		/*
 		apiKey, ok := os.LookupEnv("LINODE_TOKEN")
 		if !ok {
 		log.Fatal("Could not find LINODE_TOKEN, please assert it is set.")
@@ -55,5 +56,6 @@ var destroyCmd =  &cobra.Command {
 		}
 		fmt.Printf("Cluster not found\n")
 		os.Exit(1)
+		*/
 	},
 }
