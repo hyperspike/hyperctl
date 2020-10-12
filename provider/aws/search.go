@@ -64,18 +64,11 @@ func (c Client) ClusterName() string {
 	}
 	svcMeta := ec2metadata.New(c.Cfg)
 	metadata, err := svcMeta.GetInstanceIdentityDocument(context.Background())
-	if err == nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			fmt.Println(err.Error())
-		}
+	if err != nil {
+		log.Errorf("Failed to get instance metadata [%v]", err)
 		return ""
 	}
-	fmt.Println(metadata.InstanceID)
+	log.Info(metadata.InstanceID)
 	// fetch tags for instance ec2:DescribeTags
 
 	input := &ec2.DescribeInstancesInput{
