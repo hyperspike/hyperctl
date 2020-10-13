@@ -62,6 +62,10 @@ func (c Client) Boot() error {
 	if err != nil {
 		return err
 	}
+	_, err = runner("resize2fs /dev/xvda", 2 * time.Second)
+	if err != nil {
+		return err
+	}
 	_, err = runner("rc-service hostname restart", 5 * time.Second)
 	if err != nil {
 		return err

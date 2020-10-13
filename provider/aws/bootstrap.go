@@ -487,13 +487,13 @@ func (c Client) CreateCluster() {
 			{
 				Action: []string{
 					"dynamodb:GetItem",
-					"dynomodb:DescribeTable",
-					"dynomodb:DescribeTimeToLive",
+					"dynamodb:DescribeTable",
+					"dynamodb:DescribeTimeToLive",
 					"dynamodb:Query",
 					"dynamodb:Scan",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb:::table/"+c.Id,
+					"arn:aws:dynamodb:"+c.Region+":"+c.AccountID+":table/"+c.Id,
 				},
 				Effect: "Allow",
 			},
@@ -519,7 +519,7 @@ func (c Client) CreateCluster() {
 					"dynamodb:UpdateItem",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb:::table/"+c.Id,
+					"arn:aws:dynamodb:"+c.Region+":"+c.AccountID+":table/"+c.Id,
 				},
 				Effect: "Allow",
 			},
