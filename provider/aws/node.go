@@ -224,13 +224,17 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 	return nil
 }
 
-func (c Client) uploadClusterMeta(m masterData) error {
+func (c Client) uploadClusterMeta(m masterData, initial bool) error {
 	data, err := json.Marshal(m)
 	if err != nil {
 		log.Errorf("failed to marshal cluster metadata %v", err)
 		return err
 	}
-	err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}), dynalock.WriteWithTTL(1 * time.Second))
+	if initial {
+		err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}))
+	} else {
+		err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}), dynalock.WriteWithTTL(1 * time.Minute))
+	}
 	if err != nil {
 		log.Errorf("failed to upload cluster metadata %v", err)
 		return err
@@ -427,7 +431,7 @@ func (c Client) initMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true})
+	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true}, false)
 	if err != nil {
 		return err
 	}

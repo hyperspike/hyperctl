@@ -534,7 +534,7 @@ func (c Client) CreateCluster() {
 		return
 	}
 	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
-	err = c.uploadClusterMeta(c.master)
+	err = c.uploadClusterMeta(c.master, true)
 	if err != nil {
 		return
 	}
