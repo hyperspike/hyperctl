@@ -561,6 +561,25 @@ sudo hyperctl boot`)
 	if err != nil {
 		return
 	}
+	err = c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+		"Name": "Master - "+c.Id+" - B",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/master": "1",
+	})
+	if err != nil {
+		return
+	}
+	err = c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+		"Name": "Master - "+c.Id+" - C",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/master": "1",
+	})
+	if err != nil {
+		return
+	}
+
 	err = c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA, "", 1, 1, 1, map[string]string{
 		"Name": "Node - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
