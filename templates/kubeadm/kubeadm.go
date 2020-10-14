@@ -53,8 +53,7 @@ func (c *KubeConf) KubeadmYaml() (string, error) {
 
 	var err error
 	kubeadm := template.New("kubeadm")
-	kubeadm, err = kubeadm.Parse(`
----
+	kubeadm, err = kubeadm.Parse(`---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
 localAPIEndpoint:

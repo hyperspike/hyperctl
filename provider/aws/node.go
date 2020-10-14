@@ -376,16 +376,22 @@ func (c Client) initMaster() error {
 		return err
 	}
 
-	err = os.Mkdir("/etc/kubernetes", 0755)
-	if err != nil {
-		return err
+	if _, err := os.Stat("/etc/kubernetes"); os.IsNotExist(err) {
+		err = os.Mkdir("/etc/kubernetes", 0755)
+		if err != nil {
+			return err
+		}
 	}
-	err = os.Mkdir("/etc/kubernetes/manifests", 0755)
-	if err != nil {
-		return err
+
+	if _, err := os.Stat("/etc/kubernetes/manifests"); os.IsNotExist(err) {
+		err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+		if err != nil {
+			return err
+		}
 	}
-	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
-	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
+
+	k := kubeadm.New(strings.ReplaceAll(c.ClusterName(),"-", "."), c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
+	err = k.SecretsProviderFile("/etc/kubernetes/manifests/api-secrets-provider.yaml")
 	if err != nil {
 		return err
 	}

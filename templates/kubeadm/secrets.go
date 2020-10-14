@@ -57,7 +57,7 @@ spec:
     name: aws-encryption-provider
     command:
     - /aws-encryption-provider
-    - --key={{ .KeyARN }}
+    - --key={{ .KeyArn }}
     - --region={{ .Region }}
     - --listen=/run/kmsplugin/socket.sock
     - --health-port=:8083
