@@ -2,12 +2,9 @@ package aws
 
 import (
 	"time"
-	"encoding/hex"
-	//"errors"
 	"github.com/pkg/errors"
 	"context"
 	"math/rand"
-	crand "crypto/rand"
 	"os"
 	"os/exec"
 
@@ -357,15 +354,6 @@ func machineID() error {
 	return file.Sync()
 }
 
-func randomHex(n int) (string, error) {
-	bytes := make([]byte, n)
-	if _, err := crand.Read(bytes); err != nil {
-		log.Errorf("failed to read dev-rand %v", err)
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
 /*
  * InitMaster is going to be funky as it needs to setup the cluster for things like CNI, AWS-IRSA, etc
  */
@@ -442,7 +430,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	//_, err = readKey("/etc/kubernetes/pki/sa.pub")
+	_, err = readKey("/etc/kubernetes/pki/sa.pub")
 	if err != nil {
 		return err
 	}
