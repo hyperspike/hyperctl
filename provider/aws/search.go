@@ -77,6 +77,7 @@ func (c *Client) ClusterName() string {
 		},
 	}
 	c.Instance = metadata.InstanceID
+	c.Region   = metadata.Region
 
 	req := c.Ec2.DescribeInstancesRequest(input)
 	result, err := req.Send(context.Background())
@@ -115,6 +116,12 @@ func (c Client) InstanceID() string {
 		_ = c.ClusterName()
 	}
 	return c.Instance
+}
+func (c Client) InstanceRegion() string {
+	if ! c.Localized {
+		_ = c.ClusterName()
+	}
+	return c.Region
 }
 func (c Client) InstanceIP() string {
 	if ! c.Localized {

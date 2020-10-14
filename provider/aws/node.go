@@ -390,7 +390,7 @@ func (c Client) initMaster() error {
 		}
 	}
 
-	k := kubeadm.New(strings.ReplaceAll(c.ClusterName(),"-", "."), c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
+	k := kubeadm.New(strings.ReplaceAll(c.ClusterName(),"-", "."), c.InstanceIP(), c.InstanceRegion(), m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifests/api-secrets-provider.yaml")
 	if err != nil {
 		return err
