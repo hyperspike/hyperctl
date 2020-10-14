@@ -242,13 +242,13 @@ func (c Client) uploadClusterMeta(m masterData, initial bool) error {
 func (c *Client) controlPlaneMeta() (*masterData, error) {
 	ret, err := c.agentStore.Get(context.Background(), "ClusterMeta")
 	if err != nil {
-		log.Errorf("failed to upload cluster metadata %v", err)
+		log.Errorf("failed to get cluster metadata %v", err)
 		return nil, err
 	}
 	m := new(masterData)
 	err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), m)
 	if err != nil {
-		log.Errorf("failed to marshal cluster metadata %v", err)
+		log.Errorf("failed to unmarshal cluster metadata %v", err)
 		return nil, err
 	}
 	return m, nil
