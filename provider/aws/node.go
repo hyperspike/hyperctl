@@ -51,7 +51,7 @@ var (
 	defaultLockTtl   = dynalock.LockWithTTL(8 * time.Minute)
 )
 
-func (c Client) Boot() error {
+func (c *Client) Boot() error {
 
 	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.ClusterName(), "Agent")
 	err := machineID()
@@ -230,11 +230,11 @@ func (c Client) uploadClusterMeta(m masterData, initial bool) error {
 		log.Errorf("failed to marshal cluster metadata %v", err)
 		return err
 	}
-	if initial {
-		err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}))
-	} else {
+	// if initial {
+	err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}))
+	/* } else {
 		err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}), dynalock.WriteWithTTL(1 * time.Minute))
-	}
+	}*/
 	if err != nil {
 		log.Errorf("failed to upload cluster metadata %v", err)
 		return err
@@ -242,7 +242,7 @@ func (c Client) uploadClusterMeta(m masterData, initial bool) error {
 	return nil
 }
 
-func (c Client) controlPlaneMeta() (*masterData, error) {
+func (c *Client) controlPlaneMeta() (*masterData, error) {
 	ret, err := c.agentStore.Get(context.Background(), "ClusterMeta")
 	if err != nil {
 		log.Errorf("failed to upload cluster metadata %v", err)

@@ -58,7 +58,7 @@ func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) 
 	return ami, nil
 }
 
-func (c Client) ClusterName() string {
+func (c *Client) ClusterName() string {
 	if c.Localized {
 		return c.Id
 	}
@@ -132,7 +132,7 @@ func (c Client) IsMaster() bool {
 	return false
 }
 
-func (c Client) GetAPIEndpoint() (string, error) {
+func (c *Client) GetAPIEndpoint() (string, error) {
 	if c.master.Endpoint != "" || c.master.TokenLocation != "" || c.master.CAHash != "" {
 		return c.master.Endpoint, nil
 	}
@@ -151,7 +151,7 @@ func (c Client) GetAPICAHash() (string, error) {
 	return c.master.CAHash, nil
 }
 
-func (c Client) GetAPIToken() (string, error) {
+func (c *Client) GetAPIToken() (string, error) {
 	if _, err := c.GetAPIEndpoint() ; err != nil {
 		return "", err
 	}
