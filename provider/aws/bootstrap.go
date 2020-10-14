@@ -444,6 +444,15 @@ sudo hyperctl boot`)
 				},
 				Effect: "Allow",
 			},
+			{
+				Action: []string{
+					"kms:Decrypt",
+				},
+				Resource: []string{
+					c.master.KeyARN,
+				},
+				Effect: "Allow",
+			},
 		},
 	}
 	secretReadPolicy, err := c.CreatePolicy("secret-read-"+c.Id, secretReadP)
