@@ -184,10 +184,15 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 		return err
 	}
 
+	tokenStrip := strings.Trim(token, "\n")
+	tokenStrip = strings.Trim(tokenStrip, "\r")
+	keyStrip   := strings.Trim(key, "\n")
+	keyStrip   = strings.Trim(keyStrip, "\r")
+
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.PutSecretValueInput{
 		SecretId:           aws.String(c.master.TokenLocation),
-		SecretString:       aws.String("{\"TOKEN\":\""+token+"\",\"CERTKEY\":\""+key+"\"}"),
+		SecretString:       aws.String("{\"TOKEN\":\""+tokenStrip+"\",\"CERTKEY\":\""+keyStrip+"\"}"),
 	}
 
 	req := svc.PutSecretValueRequest(input)
@@ -367,10 +372,6 @@ func randomHex(n int) (string, error) {
 func (c Client) initMaster() error {
 	// key=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
 	// @TODO Kubeadm commands should probably hook into the Go Module
-	key, err := randomHex(16)
-	if err != nil {
-		return err
-	}
 	m, err := c.controlPlaneMeta()
 	if err != nil {
 		return err
@@ -425,7 +426,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	err = c.UploadBootstrapToken(key, token)
+	err = c.UploadBootstrapToken(k.CertKey, token)
 	if err != nil {
 		return err
 	}
@@ -437,11 +438,11 @@ func (c Client) initMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true}, false)
+	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true, KeyARN: m.KeyARN, Bucket: m.Bucket, Service: m.Service, Pods: m.Pods}, false)
 	if err != nil {
 		return err
 	}
-	_, err = readKey("/etc/kubernetes/pki/sa.pub")
+	//_, err = readKey("/etc/kubernetes/pki/sa.pub")
 	if err != nil {
 		return err
 	}

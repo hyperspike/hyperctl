@@ -353,11 +353,13 @@ func (c Client) CreateCluster() {
 		return
 	}
 	log.Info("creating launch templates")
-	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, masterProfile, bastionKey, masterSg, "sudo hyperctl boot")
+	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, masterProfile, bastionKey, masterSg, `#!/bin/sh
+sudo hyperctl boot`)
 	if err != nil {
 		return
 	}
-	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, nodeProfile, bastionKey, masterSg, "sudo hyperctl boot")
+	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, nodeProfile, bastionKey, nodeSg, `#!/bin/sh
+sudo hyperctl boot`)
 	if err != nil {
 		return
 	}
