@@ -15,7 +15,7 @@ func Version() *cobra.Command {
 		Use: "version",
 		Short: "Hyperctl Version",
 		Run: func(c *cobra.Command, args []string) {
-			fmt.Printf("Hyperctl Version: %s\n", hyperctl.Version)
+			fmt.Printf("Hyperctl Version: %s\n  Kubernetes Version: %s\n", hyperctl.Version, hyperctl.KubeVersion)
 		},
 	}
 
