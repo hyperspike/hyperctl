@@ -34,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/wolfeidau/dynalock/v2"
 	"hyperspike.io/hyperctl/templates/kubeadm"
+	"hyperspike.io/hyperctl"
 )
 
 type masterData struct {
@@ -300,7 +301,7 @@ func (c Client) joinMaster() error {
 	if err != nil {
 		return err
 	}
-	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN)
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
 	if err != nil {
 		return err
@@ -384,7 +385,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN)
+	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
 	if err != nil {
 		return err

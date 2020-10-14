@@ -19,6 +19,7 @@ type KubeConf struct {
 	PodSubnet     string
 	ServiceSubnet string
 	KeyArn        string
+	KubeVersion   string
 }
 
 func randomHex(n int) (string, error) {
@@ -29,7 +30,7 @@ func randomHex(n int) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func New(clusterName string, ip string, region string, lbDnsPriv string, podSubnet string, serviceSubnet string, keyarn string) *KubeConf {
+func New(clusterName, ip, region, lbDnsPriv, podSubnet, serviceSubnet, keyarn, kubever string) *KubeConf {
 	key, err := randomHex(32)
 	if err != nil {
 		return nil
@@ -43,6 +44,7 @@ func New(clusterName string, ip string, region string, lbDnsPriv string, podSubn
 		PodSubnet: podSubnet,
 		ServiceSubnet: serviceSubnet,
 		KeyArn: keyarn,
+		KubeVersion: kubever,
 	}
 	return c
 }
@@ -96,7 +98,7 @@ etcd:
   local:
     dataDir: /var/lib/etcd
 imageRepository: k8s.gcr.io
-kubernetesVersion: v1.18.9
+kubernetesVersion: {{ .KubeVersion }}
 networking:
   dnsDomain: {{ .ClusterName }}
   serviceSubnet: {{ .ServiceSubnet }}
