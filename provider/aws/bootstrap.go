@@ -478,7 +478,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	err = c.createTable(c.Id)
+	table, err := c.createTable(c.Id)
 	if err != nil {
 		return
 	}
@@ -493,7 +493,7 @@ func (c Client) CreateCluster() {
 					"dynamodb:Scan",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb:"+c.Region+":"+c.AccountID+":table/"+c.Id,
+					table,
 				},
 				Effect: "Allow",
 			},
@@ -519,7 +519,7 @@ func (c Client) CreateCluster() {
 					"dynamodb:UpdateItem",
 				},
 				Resource: []string{
-					"arn:aws:dynamodb:"+c.Region+":"+c.AccountID+":table/"+c.Id,
+					table,
 				},
 				Effect: "Allow",
 			},
@@ -1646,7 +1646,7 @@ func (c Client) bucket(name string) (string, error) {
 	return "arn:aws:s3:::"+name, nil
 }
 
-func (c Client) createTable(name string) error {
+func (c Client) createTable(name string) (string, error) {
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []dynamodb.AttributeDefinition{
@@ -1694,7 +1694,7 @@ func (c Client) createTable(name string) error {
 
 			log.Println(err.Error())
 		}
-		return err
+		return "", err
 	}
 	log.Println(result)
 	reqS := svc.DescribeTableRequest(&dynamodb.DescribeTableInput{
@@ -1716,7 +1716,7 @@ func (c Client) createTable(name string) error {
 			} else {
 				log.Println(err.Error())
 			}
-			return err
+			return "", err
 		}
 		status := resS.DescribeTableOutput.Table.TableStatus
 		log.Println(status)
@@ -1727,7 +1727,7 @@ func (c Client) createTable(name string) error {
 		time.Sleep(500 * time.Millisecond)
 		count++
 		if count > 10 {
-			return err
+			return "", err
 		}
 	}
 
@@ -1742,10 +1742,10 @@ func (c Client) createTable(name string) error {
 	_, err = reqU.Send(context.Background())
 	if err != nil {
 		log.Println(err.Error())
-		return err
+		return "", err
 	}
 	// log.Println(res)
-	return nil
+	return *result.TableDescription.TableArn, nil
 }
 
 func getCert(address string) (*x509.Certificate, error) {
