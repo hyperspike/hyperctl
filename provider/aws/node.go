@@ -231,11 +231,7 @@ func (c Client) uploadClusterMeta(m masterData, initial bool) error {
 		log.Errorf("failed to marshal cluster metadata %v", err)
 		return err
 	}
-	// if initial {
-	err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}))
-	/* } else {
-		err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}), dynalock.WriteWithTTL(1 * time.Minute))
-	}*/
+	err = c.agentStore.Put(context.Background(), "ClusterMeta", dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(data))}), dynalock.WriteWithTTL(7 * 24 * time.Hour))
 	if err != nil {
 		log.Errorf("failed to upload cluster metadata %v", err)
 		return err

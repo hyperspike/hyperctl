@@ -494,6 +494,7 @@ func (c Client) CreateCluster() {
 				},
 				Resource: []string{
 					table,
+					table+"/index/*",
 				},
 				Effect: "Allow",
 			},
@@ -520,6 +521,7 @@ func (c Client) CreateCluster() {
 				},
 				Resource: []string{
 					table,
+					table+"/index/*",
 				},
 				Effect: "Allow",
 			},
