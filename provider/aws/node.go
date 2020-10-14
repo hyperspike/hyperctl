@@ -141,10 +141,6 @@ func (c Client) startMaster(count int) error {
 		if count >= 35 {
 			return errors.New("Timed out requesting lock")
 		}
-		err := c.startMaster((count + 1))
-		if err != nil {
-			return err
-		}
 		ctx, cancel := context.WithTimeout(context.Background(), 12 * time.Second)
 		defer cancel()
 		_, err = lock.Lock(ctx, nil)
@@ -163,12 +159,13 @@ func (c Client) startMaster(count int) error {
 				log.Println(ctx.Err()) // prints "context deadline exceeded"
 		}
 		if err != nil {
-			log.Fatalf("failed to create a new lock on agent: %+v", err)
+			log.Errorf("failed to create a new lock on agent: %+v", err)
+			return c.startMaster((count + 1))
 		}
 		err = c.initMaster()
 		if err != nil {
 			log.Errorf("master failed to create control plane %v", err)
-			return err
+			return c.startMaster((count + 1))
 		}
 	}
 
@@ -289,16 +286,22 @@ func (c Client) joinMaster() error {
 		return err
 	}
 
-	err = os.Mkdir("/etc/kubernetes", 0755)
-	if err != nil {
-		return err
+	if _, err := os.Stat("/etc/kubernetes"); os.IsNotExist(err) {
+		err = os.Mkdir("/etc/kubernetes", 0755)
+		if err != nil {
+			return err
+		}
 	}
-	err = os.Mkdir("/etc/kubernetes/manifests", 0755)
-	if err != nil {
-		return err
+
+	if _, err := os.Stat("/etc/kubernetes/manifests"); os.IsNotExist(err) {
+		err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+		if err != nil {
+			return err
+		}
 	}
+
 	k := kubeadm.New(c.ClusterName()+"."+c.Region, c.InstanceIP(), c.Region, m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
-	err = k.SecretsProviderFile("/etc/kubernetes/manifest/api-secrets-provider.yaml")
+	err = k.SecretsProviderFile("/etc/kubernetes/manifests/api-secrets-provider.yaml")
 	if err != nil {
 		return err
 	}
