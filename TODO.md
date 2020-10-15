@@ -1,7 +1,7 @@
 
 ## Current Status
 
-* All command components for MVP have been created and tested. Cluster creation and joining need to be tested. Also cluster upload needs to be tested.
+* All command components for MVP have been created and tested. Cluster Join has been tested. Cluster upload needs to be tested.
 
 ## MVP
 
@@ -31,16 +31,17 @@
     - [x] kubeadm config template
     - [x] kustomize template
     - [ ] Embed kube client and upload configs
+      - [ ] cilium
+      - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
+      - [ ] irsa deployment
     - [x] api-server-aws-kms
-    - [ ] cilium
-    - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
     - [ ] IRSA Upload
 * [x] Shell Completion
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
 * [x] Create version from git tag
 * [ ] set metadata in dynamodb
-  * [ ] IP ( auto calculated )
+  * [x] IP ( auto calculated )
   * [x] Service subnet ( Optional )
   * [x] Pod subnet ( Optional )
   * [x] cluster name ( Optional / Generated )
@@ -53,7 +54,7 @@
     - [x] Secrets-Manager
   * [x] Node
     - [x] Launch Config
-    - [ ] ASG
+    - [x] ASG
   * [ ] Master
     - [x] API-Server secrets kms key
     - [x] Launch Config
@@ -61,8 +62,8 @@
     - [x] IRSA S3
     - [x] IRSA OpenID IAM
       - [ ] write a quick daemon to perodically update the OpenID cert hash
-  * [ ] Auth
-    - [ ] Roles
+  * [x] Auth
+    - [x] Roles
 * [ ] upload admin.conf to secrets-manager, and support fetch to local
 
 ## Alpha
@@ -70,6 +71,7 @@
 * [ ] Refactor to add concurrency
 * [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
+* [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Switch from fmt to log (like argonaut)
 
