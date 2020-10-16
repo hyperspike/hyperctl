@@ -32,7 +32,7 @@
     - [x] kustomize template
     - [ ] Embed kube client and upload configs
       - [ ] cilium
-      - [ ] cloud-controller ( should probably pull in PR to fix multi-eni )
+      - [x] cloud-controller ( should probably pull in PR to fix multi-eni )
       - [ ] irsa deployment
     - [x] api-server-aws-kms
     - [ ] IRSA Upload
