@@ -31,6 +31,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/wolfeidau/dynalock/v2"
 	"hyperspike.io/hyperctl/templates/kubeadm"
+	"hyperspike.io/hyperctl/deployer"
 	"hyperspike.io/hyperctl"
 )
 
@@ -427,6 +428,10 @@ func (c Client) initMaster() error {
 		}
 	}
 	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true, KeyARN: m.KeyARN, Bucket: m.Bucket, Service: m.Service, Pods: m.Pods}, false)
+	if err != nil {
+		return err
+	}
+	_, err = deployer.New()
 	if err != nil {
 		return err
 	}
