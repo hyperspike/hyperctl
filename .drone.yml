@@ -8,7 +8,7 @@ platform:
 
 steps:
 - name: vet
-  image: graytshirt/golang:0.0.4
+  image: graytshirt/golang:0.0.5
   commands:
   - make vet
 - name: lint
@@ -16,7 +16,7 @@ steps:
   commands:
   - golangci-lint run --timeout 5m -v
 - name: build
-  image: graytshirt/golang:0.0.4
+  image: graytshirt/golang:0.0.5
   commands:
   - make build
 - name: release
