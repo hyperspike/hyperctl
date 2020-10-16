@@ -431,7 +431,11 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	_, err = deployer.New()
+	d, err := deployer.New()
+	if err != nil {
+		return err
+	}
+	err = d.CCM(m.Endpoint, m.Pods, c.ClusterName())
 	if err != nil {
 		return err
 	}
