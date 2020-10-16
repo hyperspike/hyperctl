@@ -28,7 +28,7 @@ push:
 
 .PHONY: vet
 vet:
-	go vet ./...
+	go vet -v ./...
 
 .PHONY: lint
 lint:
@@ -36,7 +36,7 @@ lint:
 		export BINARY="golangci-lint"; \
 		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin v1.24.0; \
 	fi
-	golangci-lint run --timeout 5m
+	golangci-lint run --timeout 5m -v
 
 version:
 	@echo "Version: $(VERSION)"
