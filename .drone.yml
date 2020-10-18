@@ -24,12 +24,12 @@ steps:
     path_style: true
     mount:
     - "go"
-- name: vet
-  image: graytshirt/golang:0.0.5
-  environment:
-    GOPATH: "/drone/src/go"
-  commands:
-  - make vet
+#- name: vet
+#  image: graytshirt/golang:0.0.5
+#  environment:
+#    GOPATH: "/drone/src/go"
+#  commands:
+#  - make vet
 - name: lint
   image: golangci/golangci-lint:v1.31.0-alpine
   environment:
