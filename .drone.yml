@@ -14,6 +14,9 @@ steps:
       from_secret: aws_access_key_id
     AWS_SECRET_ACCESS_KEY:
       from_secret: aws_secret_access_key
+    GOCACHE: "cache"
+    GOMODCACHE: "modcache"
+
   settings:
     restore: true
     cache_key: "cache"
@@ -23,20 +26,53 @@ steps:
     region: us-east-1
     path_style: true
     mount:
-    - 'vendor'
+    - "cache"
+    - "modcache"
 
 - name: vet
   image: graytshirt/golang:0.0.5
+  environment:
+    GOCACHE: "cache"
+    GOMODCACHE: "modcache"
   commands:
   - make vet
 - name: lint
   image: golangci/golangci-lint:v1.31.0-alpine
+  environment:
+    GOCACHE: "cache"
+    GOMODCACHE: "modcache"
   commands:
   - golangci-lint run --timeout 5m -v
 - name: build
   image: graytshirt/golang:0.0.5
+  environment:
+    GOCACHE: "cache"
+    GOMODCACHE: "modcache"
   commands:
   - make build
+- name: cache-pull
+  image: meltwater/drone-cache:v1.1.0
+  environment:
+    GOCACHE: "cache"
+    GOMODCACHE: "modcache"
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: aws_access_key_id
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: aws_secret_access_key
+  settings:
+    rebuild: true
+    cache_key: "cache"
+    archive_format: "gzip"
+    bucket: drone-cache
+    endpoint: http://10.12.4.114:9000
+    region: us-east-1
+    path_style: true
+    mount:
+    mount:
+    - "cache"
+    - "modcache"
+
 - name: release
   image: grayshirt/kaniko
   commands:
