@@ -35,7 +35,7 @@ steps:
   environment:
     GOPATH: "/drone/src/go"
   commands:
-  - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp"
+  - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
 - name: build
   image: graytshirt/golang:0.0.5
   environment:
