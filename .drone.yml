@@ -50,7 +50,7 @@ steps:
     GOMODCACHE: "modcache"
   commands:
   - make build
-- name: cache-pull
+- name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
     GOCACHE: "cache"
