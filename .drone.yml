@@ -28,8 +28,8 @@ steps:
 - name: vet
   image: graytshirt/golang:0.0.5
   environment:
-    GOCACHE: "cache"
-    GOMODCACHE: "modcache"
+    GOCACHE: "${PWD}/cache"
+    GOMODCACHE: "${PWD}/modcache"
   commands:
   - make vet
 - name: lint
@@ -48,9 +48,6 @@ steps:
   - make build
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
-  environment:
-    GOCACHE: "${PWD}/cache"
-    GOMODCACHE: "${PWD}/modcache"
   environment:
     AWS_ACCESS_KEY_ID:
       from_secret: aws_access_key_id
