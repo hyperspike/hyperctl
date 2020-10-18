@@ -14,9 +14,6 @@ steps:
       from_secret: aws_access_key_id
     AWS_SECRET_ACCESS_KEY:
       from_secret: aws_secret_access_key
-    GOCACHE: "cache"
-    GOMODCACHE: "modcache"
-
   settings:
     restore: true
     cache_key: "cache"
@@ -28,7 +25,6 @@ steps:
     mount:
     - "cache"
     - "modcache"
-
 - name: vet
   image: graytshirt/golang:0.0.5
   environment:
@@ -39,22 +35,22 @@ steps:
 - name: lint
   image: golangci/golangci-lint:v1.31.0-alpine
   environment:
-    GOCACHE: "cache"
-    GOMODCACHE: "modcache"
+    GOCACHE: "${PWD}/cache"
+    GOMODCACHE: "${PWD}/modcache"
   commands:
   - golangci-lint run --timeout 5m -v
 - name: build
   image: graytshirt/golang:0.0.5
   environment:
-    GOCACHE: "cache"
-    GOMODCACHE: "modcache"
+    GOCACHE: "${PWD}/cache"
+    GOMODCACHE: "${PWD}/modcache"
   commands:
   - make build
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
-    GOCACHE: "cache"
-    GOMODCACHE: "modcache"
+    GOCACHE: "${PWD}/cache"
+    GOMODCACHE: "${PWD}/modcache"
   environment:
     AWS_ACCESS_KEY_ID:
       from_secret: aws_access_key_id
