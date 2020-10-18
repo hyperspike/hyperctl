@@ -38,7 +38,7 @@ steps:
     GOCACHE: "/drone/src/cache"
     GOMODCACHE: "/drone/src/mod"
   commands:
-  - golangci-lint run --timeout 5m -v
+  - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache"
 - name: build
   image: graytshirt/golang:0.0.5
   environment:
