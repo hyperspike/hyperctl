@@ -24,6 +24,7 @@ steps:
     path_style: true
     mount:
     - "go"
+    - "cache"
 #- name: vet
 #  image: graytshirt/golang:0.0.5
 #  environment:
@@ -34,12 +35,14 @@ steps:
   image: golangci/golangci-lint:v1.31.0-alpine
   environment:
     GOPATH: "/drone/src/go"
+    GOCACHE: "/drone/src/cache"
   commands:
   - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
 - name: build
   image: graytshirt/golang:0.0.5
   environment:
     GOPATH: "/drone/src/go"
+    GOCACHE: "/drone/src/cache"
   commands:
   - make build
 - name: cache-push
@@ -59,6 +62,7 @@ steps:
     path_style: true
     mount:
     - "go"
+    - "cache"
 
 - name: release
   image: grayshirt/kaniko
