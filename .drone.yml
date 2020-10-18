@@ -7,6 +7,23 @@ platform:
   arch: amd64
 
 steps:
+- name: cache-pull
+  image: meltwater/drone-cache:v1.1.0
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: aws_access_key_id
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: aws_secret_access_key
+  settings:
+    restore: true
+    cache_key: "gzip"
+    archive_format: "gzip"
+    bucket: drone-cache
+    endpoint: https://10.12.4.114:9000
+    path-style: true
+    mount:
+    - 'vendor'
+
 - name: vet
   image: graytshirt/golang:0.0.5
   commands:
