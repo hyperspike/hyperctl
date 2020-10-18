@@ -24,28 +24,25 @@ steps:
     path_style: true
     mount:
     - "cache"
-    - "modcache"
 - name: vet
   image: graytshirt/golang:0.0.5
   environment:
-    GOCACHE: "${PWD}/cache"
-    GOMODCACHE: "${PWD}/modcache"
+    GOCACHE: "/drone/src/cache"
   commands:
   - make vet
 - name: lint
   image: golangci/golangci-lint:v1.31.0-alpine
   environment:
-    GOCACHE: "${PWD}/cache"
-    GOMODCACHE: "${PWD}/modcache"
+    GOCACHE: "/drone/src/cache"
   commands:
   - golangci-lint run --timeout 5m -v
 - name: build
   image: graytshirt/golang:0.0.5
   environment:
-    GOCACHE: "${PWD}/cache"
-    GOMODCACHE: "${PWD}/modcache"
+    GOCACHE: "/drone/src/cache"
   commands:
   - make build
+  - ls
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
@@ -64,7 +61,6 @@ steps:
     mount:
     mount:
     - "cache"
-    - "modcache"
 
 - name: release
   image: grayshirt/kaniko
