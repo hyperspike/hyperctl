@@ -21,7 +21,7 @@ steps:
     bucket: drone-cache
     endpoint: https://10.12.4.114:9000
     region: us-east-1
-    path-style: "true"
+    path_style: true
     mount:
     - 'vendor'
 
