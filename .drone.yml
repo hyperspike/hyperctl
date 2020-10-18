@@ -16,10 +16,10 @@ steps:
       from_secret: aws_secret_access_key
   settings:
     restore: true
-    cache_key: "gzip"
+    cache_key: "cache"
     archive_format: "gzip"
     bucket: drone-cache
-    endpoint: https://10.12.4.114:9000
+    endpoint: http://10.12.4.114:9000
     region: us-east-1
     path_style: true
     mount:
