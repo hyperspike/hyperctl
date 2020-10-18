@@ -25,13 +25,11 @@ steps:
     mount:
     - "cache"
     - "mod"
-    - "tmp"
 - name: vet
   image: graytshirt/golang:0.0.5
   environment:
     GOCACHE: "/drone/src/cache"
     GOMODCACHE: "/drone/src/mod"
-    GOTMPDIR: "/drone/src/tmp"
   commands:
   - make vet
 - name: lint
@@ -39,7 +37,6 @@ steps:
   environment:
     GOCACHE: "/drone/src/cache"
     GOMODCACHE: "/drone/src/mod"
-    GOTMPDIR: "/drone/src/tmp"
   commands:
   - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp"
 - name: build
@@ -47,7 +44,6 @@ steps:
   environment:
     GOCACHE: "/drone/src/cache"
     GOMODCACHE: "/drone/src/mod"
-    GOTMPDIR: "/drone/src/tmp"
   commands:
   - make build
 - name: cache-push
@@ -68,7 +64,6 @@ steps:
     mount:
     - "cache"
     - "mod"
-    - "tmp"
 
 - name: release
   image: grayshirt/kaniko
