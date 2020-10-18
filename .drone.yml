@@ -43,6 +43,7 @@ steps:
   commands:
   - make build
   - ls
+  - ls cache
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
