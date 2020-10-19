@@ -2,7 +2,6 @@ package deployer
 
 import (
 	"context"
-	// "k8s.io/apimachinery/pkg/runtime"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -10,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (d *Deployer) CCM(endpoint, pods, cluster string) error {
-
+func (d *Deployer) CCM() error {
+	log.Infof("deploying cloud-contoller-manager to %s", d.cluster)
 	err := d.r.Create(context.TODO(), ccmServiceAccount())
 	if err != nil {
 		log.Errorf("failed to create cloud-controller service account, %v", err)
@@ -22,7 +21,7 @@ func (d *Deployer) CCM(endpoint, pods, cluster string) error {
 		log.Errorf("failed to create elevated priviledges for cloud-controller service account, %v", err)
 		return err
 	}
-	err = d.r.Create(context.TODO(), ccmDeployment(endpoint, pods, cluster))
+	err = d.r.Create(context.TODO(), ccmDeployment(d.endpoint, d.pods, d.cluster))
 	if err != nil {
 		log.Errorf("failed to create cloud-controller DaemonSet, %v", err)
 		return err
@@ -34,8 +33,8 @@ func (d *Deployer) CCM(endpoint, pods, cluster string) error {
 func ccmServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
-			Kind: "ClusterRoleBinding",
-			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind: "ServiceAccount",
+			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "cloud-controller-manager",
@@ -51,8 +50,8 @@ func ccmServiceAccount() *corev1.ServiceAccount {
 func ccmRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
-			Kind: "ServiceAccount",
-			APIVersion: "v1",
+			Kind: "ClusterRoleBinding",
+			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "system:cloud-controller-manager",

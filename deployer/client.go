@@ -13,9 +13,12 @@ import (
 
 type Deployer struct {
 	r client.Client
+	endpoint string
+	pods string
+	cluster string
 }
 
-func New() (*Deployer, error) {
+func New(endpoint, pods, cluster string) (*Deployer, error) {
 	_ = context.Background()
 	cfg, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/admin.conf")
 	if err != nil {
