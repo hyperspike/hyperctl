@@ -3,6 +3,8 @@
 
 * All command components for MVP have been created and tested. Cluster Join has been tested. Cluster upload needs to be tested.
 
+* Cilium and cloud-controller are done, just need to finish irsa, test deployment, and write admin.conf uploader. There could be a small issue with the api not being ready while we start uploading config.
+
 ## MVP
 
 * [x] Tag based AMI search.
@@ -12,13 +14,12 @@
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Get token from secrets-manager
     - [x] Join node
-  * [ ] join-masters
+  * [x] join-masters
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock
     - [x] Check for Initialized
     - [x] api-server-aws-kms
-    - [ ] Check version
     - [x] Join ring
   * [ ] bootstrap-master
     - [x] Calculate Cluster-name, and Node Type
@@ -31,7 +32,7 @@
     - [x] kubeadm config template
     - [x] kustomize template
     - [ ] Embed kube client and upload configs
-      - [ ] cilium
+      - [x] cilium
       - [x] cloud-controller ( should probably pull in PR to fix multi-eni )
       - [ ] irsa deployment
     - [x] api-server-aws-kms
@@ -40,34 +41,33 @@
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
 * [x] Create version from git tag
-* [ ] set metadata in dynamodb
+* [x] set metadata in dynamodb
   * [x] IP ( auto calculated )
   * [x] Service subnet ( Optional )
   * [x] Pod subnet ( Optional )
   * [x] cluster name ( Optional / Generated )
   * [x] elb dns ( Calculated )
   * [x] region ( Calculated )
-  * [ ] external dns ( Optional )
-* [ ] Cluster Util components ( Create outside of instances )
+* [x] Cluster Util components ( Create outside of instances )
   * [x] Meta
     - [x] DynamoDB
     - [x] Secrets-Manager
   * [x] Node
     - [x] Launch Config
     - [x] ASG
-  * [ ] Master
+  * [x] Master
     - [x] API-Server secrets kms key
     - [x] Launch Config
     - [x] ASG
     - [x] IRSA S3
     - [x] IRSA OpenID IAM
-      - [ ] write a quick daemon to perodically update the OpenID cert hash
   * [x] Auth
     - [x] Roles
 * [ ] upload admin.conf to secrets-manager, and support fetch to local
 
 ## Alpha
 
+* [ ] More Cilium configs, hubble, psp, serviceMonitors
 * [ ] Refactor to add concurrency
 * [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
@@ -79,7 +79,7 @@
 
 * [ ] Edge node VPN access
 * [ ] Plugins
-  * [ ] support cilium etcd and etcd-operator (optional)
+  * [ ] support cilium-etcd and etcd-operator (optional)
   * [ ] support Multi-Cluster Mesh (optional, requires cilium-etcd)
   * [ ] support gitifold (optional)
   * [ ] support ingress (optional, requires )
