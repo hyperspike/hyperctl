@@ -65,9 +65,6 @@ func ptrToInt64(i int64) *int64 {
 func ptrToInt32(i int32) *int32 {
 	return &i
 }
-func ptrToString(s string) *string {
-	return &s
-}
 
 func ciliumConfigMap(pods, cluster string) *corev1.ConfigMap { // {{{
 	return &corev1.ConfigMap{
