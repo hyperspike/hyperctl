@@ -439,6 +439,10 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+	err = d.Cilium()
+	if err != nil {
+		return err
+	}
 	_, err = readKey("/etc/kubernetes/pki/sa.pub")
 	if err != nil {
 		return err
