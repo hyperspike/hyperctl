@@ -21,7 +21,7 @@ func init() {
 
 var destroyCmd =  &cobra.Command {
 	Use: "destroy",
-	Short: "Destroy A Linode LKE Cluster",
+	Short: "Destroy a hyperspike cluster",
 	Run: func(c *cobra.Command, args []string) {
 		/*
 		apiKey, ok := os.LookupEnv("LINODE_TOKEN")
