@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/client-go/kubernetes/scheme"
+	"hyperspike.io/hyperctl"
 )
 
 type Deployer struct {
@@ -16,6 +17,7 @@ type Deployer struct {
 	endpoint string
 	pods string
 	cluster string
+	ciliumVersion string
 }
 
 func New(endpoint, pods, cluster string) (*Deployer, error) {
@@ -35,6 +37,10 @@ func New(endpoint, pods, cluster string) (*Deployer, error) {
 	c.r, err = client.New(kconfig, client.Options{
 		Scheme: s,
 	})
+	c.endpoint = endpoint
+	c.pods = pods
+	c.cluster = cluster
+	c.ciliumVersion = hyperctl.CiliumVersion
 	if err != nil {
 		log.Errorf("failed to build controller-runtime client, %v", err)
 		return nil, err

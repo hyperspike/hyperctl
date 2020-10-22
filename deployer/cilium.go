@@ -217,7 +217,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 					Containers: []corev1.Container{
 						{
 							Name: "cilium-agent",
-							Image: "docker.io/cilium/cilium:v1.8.4",
+							Image: "docker.io/cilium/cilium:"+d.ciliumVersion,
 							Command: []string{
 								"cilium-agent",
 							},
@@ -407,7 +407,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 					InitContainers: []corev1.Container{
 						{
 							Name: "clean-cilium-state",
-							Image: "docker.io/cilium/cilium:v1.8.4",
+							Image: "docker.io/cilium/cilium:"+d.ciliumVersion,
 							Command: []string{
 								"/init-container.sh",
 							},
@@ -633,7 +633,7 @@ func (d *Deployer) ciliumOperatorDeployment() error { // {{{
 					Containers: []corev1.Container{
 						{
 							Name: "cilium-operator",
-							Image: "docker.io/cilium/operator-aws:v1.8.4",
+							Image: "docker.io/cilium/operator-aws:"+d.ciliumVersion,
 							Env: []corev1.EnvVar{
 								{
 									Name: "K8S_NODE_NAME",
