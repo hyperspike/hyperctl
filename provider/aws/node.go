@@ -361,6 +361,7 @@ func machineID() error {
 func (c Client) initMaster() error {
 	// key=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
 	// @TODO Kubeadm commands should probably hook into the Go Module
+	log.Info("initializing control plane")
 	m, err := c.controlPlaneMeta()
 	if err != nil {
 		return err
