@@ -123,7 +123,7 @@ func (c Client) startMaster(count int) error {
 
 	lockStore := dynalock.New(dynamodb.New(c.Cfg), c.ClusterName(), "Lock")
 
-	lock, err := lockStore.NewLock(context.Background(), agentName + ".lock", defaultLockTtl)
+	lock, err := lockStore.NewLock(context.Background(), "master.lock", defaultLockTtl)
 	if err != nil {
 		log.Errorf("failed to create lock %v", err)
 		return err
