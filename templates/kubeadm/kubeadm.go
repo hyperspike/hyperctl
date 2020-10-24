@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"bytes"
+	"strings"
 )
 
 type KubeConf struct {
@@ -16,6 +17,7 @@ type KubeConf struct {
 	LBDnsPriv     string
 	Region        string
 	ClusterName   string
+	DNSName       string
 	PodSubnet     string
 	ServiceSubnet string
 	KeyArn        string
@@ -41,6 +43,7 @@ func New(clusterName, ip, region, lbDnsPriv, podSubnet, serviceSubnet, keyarn, k
 		LBDnsPriv: lbDnsPriv,
 		Region: region,
 		ClusterName: clusterName,
+		DNSName: strings.ReplaceAll(clusterName, "-", "."),
 		PodSubnet: podSubnet,
 		ServiceSubnet: serviceSubnet,
 		KeyArn: keyarn,
@@ -82,7 +85,7 @@ apiServer:
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
     kubelet-preferred-address-types: Hostname,InternalDNS
 certificatesDir: /etc/kubernetes/pki
-clusterName: {{ .Region }}
+clusterName: {{ .ClusterName }}
 controlPlaneEndpoint: {{ .LBDnsPriv -}}:6443
 controllerManager:
   extraArgs:
@@ -99,7 +102,7 @@ etcd:
 imageRepository: k8s.gcr.io
 kubernetesVersion: {{ .KubeVersion }}
 networking:
-  dnsDomain: {{ .ClusterName }}
+  dnsDomain: {{ .DNSName }}
   serviceSubnet: {{ .ServiceSubnet }}
   podSubnet: {{ .PodSubnet }}
 ---

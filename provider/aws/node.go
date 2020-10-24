@@ -157,11 +157,13 @@ func (c Client) startMaster(count int) error {
 				log.Println(ctx.Err()) // prints "context deadline exceeded"
 		}
 		if err != nil {
+			unlock(lock)
 			log.Errorf("failed to create a new lock on agent: %+v", err)
 			return c.startMaster((count + 1))
 		}
 		err = c.initMaster()
 		if err != nil {
+			unlock(lock)
 			log.Errorf("master failed to create control plane %v", err)
 			return c.startMaster((count + 1))
 		}
@@ -381,7 +383,7 @@ func (c Client) initMaster() error {
 		}
 	}
 
-	k := kubeadm.New(strings.ReplaceAll(c.ClusterName(),"-", "."), c.InstanceIP(), c.InstanceRegion(), m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
+	k := kubeadm.New(c.ClusterName(), c.InstanceIP(), c.InstanceRegion(), m.Endpoint, m.Pods, m.Service, m.KeyARN, hyperctl.KubeVersion)
 	err = k.SecretsProviderFile("/etc/kubernetes/manifests/api-secrets-provider.yaml")
 	if err != nil {
 		return err
@@ -412,7 +414,7 @@ func (c Client) initMaster() error {
 		return err
 	}
 	// @TODO Kubeadm commands should probably hook into the Go Module
-	token, err  := runner("kubeadm token create --ttl=0 2>/dev/null", 3 * time.Second)
+	token, err  := runner("kubeadm token create --ttl=0 2>/dev/null", 60 * time.Second)
 	if err != nil {
 		return err
 	}
@@ -460,17 +462,18 @@ func runner(command string, timeout time.Duration) (string, error) {
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", command)
 
 	// This time we can simply use Output() to get the result.
+	log.Infof("Running: %s", command)
 	out, err := cmd.Output()
-	log.Debugf("Running: %s\n", command)
 
 	// We want to check the context error to see if the timeout was executed.
 	// The error returned by cmd.Output() will be OS specific based on what
 	// happens when a process is killed.
-	if ctx.Err() == context.DeadlineExceeded {
-		log.Error("Command timed out")
-		return "", ctx.Err()
-	} else if err != nil {
-	// If there's no context error, we know the command completed (or errored).
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Error("Command timed out")
+			return "", ctx.Err()
+		}
+		// If there's no context error, we know the command completed (or errored).
 		log.Error("Non-zero exit code:", err)
 		return "", err
 	}

@@ -7,7 +7,7 @@ import (
 	"hyperspike.io/hyperctl/cmd/commands"
 )
 func init() {
-	logFile, err := os.Create("/tmp/hyperspike.log")
+	logFile, err := os.OpenFile("/tmp/hyperspike.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 644)
 	if err != nil {
 		panic(err)
 	}
