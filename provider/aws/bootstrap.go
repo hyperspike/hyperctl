@@ -529,6 +529,7 @@ sudo hyperctl boot`)
 				Action: []string{
 					"dynamodb:PutItem",
 					"dynamodb:UpdateItem",
+					"dynamodb:DeleteItem",
 				},
 				Resource: []string{
 					table,

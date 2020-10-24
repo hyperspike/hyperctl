@@ -205,6 +205,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 											},
 										},
 									},
+									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
 						},
