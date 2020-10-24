@@ -16,8 +16,8 @@ func AMI() *cobra.Command {
 		Short: "print AMIs",
 		Run: func(c *cobra.Command, args []string) {
 			p := aws.Init("us-east-2", "", "")
-			ami, _ := p.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
-			log.WithFields(log.Fields{"ami": ami}).Info("fetched latest AMI")
+			ami, name, desc, _ := p.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+			log.WithFields(log.Fields{"ami": ami, "name": name,}).Infof("fetched latest AMI (%s)", desc)
 		},
 	}
 

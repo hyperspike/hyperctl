@@ -17,7 +17,7 @@ type Secret struct {
 	Token string `json:"TOKEN"`
 	CertKey string `json:"CERTKEY"`
 }
-func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) {
+func (c Client) SearchAMI(owner string, tags map[string]string) (string, string,string,error) {
 
 	var filters []ec2.Filter
 	for k, v := range tags {
@@ -43,19 +43,19 @@ func (c Client) SearchAMI(owner string, tags map[string]string) (string, error) 
 		} else {
 			log.Error("Failed to fetch AMI " + err.Error())
 		}
-		return "", err
+		return "", "", "", err
 	}
 
-	var ami string
+	var img ec2.Image
 	date := time.Date(2006, time.November, 10, 23, 0, 0, 0, time.UTC)
 	for _, image := range result.Images {
 		t, _ := time.Parse(time.RFC3339, *image.CreationDate)
 		if t.Unix() > date.Unix() {
 			date = t
-			ami = *image.ImageId
+			img = image
 		}
 	}
-	return ami, nil
+	return *img.ImageId, *img.Name, *img.Description, nil
 }
 
 func (c *Client) ClusterName() string {

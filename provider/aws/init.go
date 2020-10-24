@@ -99,6 +99,6 @@ func (c Client) accountId() {
 		return
 	}
 
-	fmt.Println(result)
+	// fmt.Println(result)
 	c.AccountID = *result.Accounts[0].Id
 }

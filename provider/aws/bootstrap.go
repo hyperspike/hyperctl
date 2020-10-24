@@ -348,7 +348,7 @@ func (c Client) CreateCluster() {
 	}
 
 
-	ami, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+	ami, _, _, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
 	if err != nil {
 		return
 	}
