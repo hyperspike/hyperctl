@@ -1362,7 +1362,7 @@ func (c Client) secret(name string, key string, secret string) (string, error) {
 				Value: aws.String("owned"),
 			},
 			{
-				Key:   aws.String(strings.Join([]string{"kubernetesCluster", c.Id}, "")),
+				Key:   aws.String("kubernetesCluster"),
 				Value: aws.String(c.Id),
 			},
 			{
