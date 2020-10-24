@@ -104,7 +104,7 @@ func ciliumConfigMap(pods, cluster string) *corev1.ConfigMap { // {{{
 			"install-iptables-rules": "true",
 			"auto-direct-node-routes": "true",
 			"native-routing-cidr": pods,
-			"enable-host-firewall": "true",
+			"enable-host-firewall": "false",
 			"kube-proxy-replacement":  "probe",
 			"enable-host-reachable-services": "true",
 			"enable-health-check-nodeport": "true",
@@ -709,6 +709,10 @@ func (d *Deployer) ciliumOperatorDeployment() error { // {{{
 								{
 									Name: "KUBERNETES_SERVICE_PORT",
 									Value: "6443",
+								},
+								{
+									Name: "HOME",
+									Value: "/tmp",
 								},
 							},
 							Ports: []corev1.ContainerPort{
