@@ -812,69 +812,6 @@ func (c Client) gateway(vpc string) string {
 	return *result.InternetGateway.InternetGatewayId
 }
 
-/* @TODO mark nat gateway as deprecated
-func (c Client) nat(subnet string) string {
-	input := &ec2.AllocateAddressInput{
-		Domain: ec2.DomainTypeVpc,
-	}
-
-	req := c.Ec2.AllocateAddressRequest(input)
-	result, err := req.Send(context.Background())
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				log.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.Println(err.Error())
-		}
-		return ""
-	}
-	log.Println(result)
-
-	natInput := &ec2.CreateNatGatewayInput{
-		AllocationId: aws.String(*result.AllocateAddressOutput.AllocationId),
-		SubnetId:     aws.String(subnet),
-	}
-
-	natReq := c.Ec2.CreateNatGatewayRequest(natInput)
-	natRes, err := natReq.Send(context.Background())
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				log.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.Println(err.Error())
-		}
-		return ""
-	}
-	log.Printf("%v\n", natRes)
-
-	stateInput := &ec2.DescribeNatGatewaysInput{
-		NatGatewayIds: []string{*natRes.CreateNatGatewayOutput.NatGateway.NatGatewayId},
-	}
-	// stateReq := c.Ec2.DescribeNatGatewaysRequest(stateInput)
-	err = c.Ec2.WaitUntilNatGatewayAvailable(context.Background(), stateInput)
-	if err != nil {
-		log.Errorf("failed to wait for nat gateway to exist, %v", err)
-		return ""
-	}
-
-	c.tag([]string{*result.AllocateAddressOutput.AllocationId, *natRes.CreateNatGatewayOutput.NatGateway.NatGatewayId}, map[string]string{
-		"Name": c.Id,
-	})
-
-	return *natRes.CreateNatGatewayOutput.NatGateway.NatGatewayId
-}
-*/
-
 func (c Client) routeTable(vpc string, gateway string, cidr string) string {
 	input := &ec2.CreateRouteTableInput{
 		VpcId: aws.String(vpc),
