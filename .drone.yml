@@ -38,6 +38,13 @@ steps:
     GOCACHE: "/drone/src/cache"
   commands:
   - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
+- name: sec
+  image: securego/gosec:v2.4.0
+  environment:
+    GOPATH: "/drone/src/go"
+    GOCACHE: "/drone/src/cache"
+  commands:
+  - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
 - name: build
   image: graytshirt/golang:0.0.5
   environment:

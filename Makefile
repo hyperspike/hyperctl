@@ -30,6 +30,16 @@ push:
 vet:
 	go vet -v ./...
 
+.PHONY: sec
+sec:
+	@hash gosec > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		curl https://github.com/securego/gosec/releases/download/v2.4.0/gosec_2.4.0_linux_amd64.tar.gz -OL; \
+		tar -xvf gosec*.tar.gz ; \
+		cp gosec $(GOPATH)/bin ; \
+		rm gosec* ; \
+	fi
+	gosec ./...
+
 .PHONY: lint
 lint:
 	@hash golangci-lint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \

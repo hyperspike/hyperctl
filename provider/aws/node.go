@@ -292,14 +292,14 @@ func (c Client) joinMaster() error {
 	}
 
 	if _, err := os.Stat("/etc/kubernetes"); os.IsNotExist(err) {
-		err = os.Mkdir("/etc/kubernetes", 0755)
+		err = os.Mkdir("/etc/kubernetes", 0750)
 		if err != nil {
 			return err
 		}
 	}
 
 	if _, err := os.Stat("/etc/kubernetes/manifests"); os.IsNotExist(err) {
-		err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+		err = os.Mkdir("/etc/kubernetes/manifests", 0750)
 		if err != nil {
 			return err
 		}
@@ -315,9 +315,11 @@ func (c Client) joinMaster() error {
 		return err
 	}
 
-	err = os.Mkdir("kustomize", 0755)
-	if err != nil {
-		return err
+	if _, err := os.Stat("kustomize"); os.IsNotExist(err) {
+		err = os.Mkdir("kustomize", 0750)
+		if err != nil {
+			return err
+		}
 	}
 	err = k.KustomizationFile("kustomize/kustomization.yaml")
 	if err != nil {
@@ -327,6 +329,7 @@ func (c Client) joinMaster() error {
 	if err != nil {
 		return err
 	}
+
 	// @TODO Kubeadm commands should probably hook into the Go Module
 	_, err = runner("kubeadm join --cri-socket /run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight --control-plane --certificate-key " + certKey + " --ignore-preflight-errors=DirAvailable--var-lib-etcd,DirAvailable--etc-kubernetes-manifests -k ./kustomize", 5 * time.Minute)
 	if err != nil {
@@ -341,20 +344,30 @@ func machineID() error {
 		log.Errorf("failed to generate machine id %v", err)
 		return err
 	}
-	file, err := os.Create("/etc/machine-id")
+	fn := "/etc/machine-id"
+	file, err := os.Create(fn)
 	if err != nil {
-		log.Errorf("failed to create /etc/machine-id %v", err)
+		log.Errorf("failed to create %s, %v", fn, err)
 		return err
 	}
-	defer file.Close()
 
 	_, err = io.WriteString(file, strings.ReplaceAll(id.String(), "-", ""))
 	if err != nil {
-		log.Errorf("failed to write /etc/machine-id, %v", err)
+		if err := file.Close() ; err != nil {
+			log.Errorf("failed to close %s, %v", fn, err)
+		}
+		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 
-	return file.Sync()
+	if err := file.Sync(); err != nil {
+		if err := file.Close() ; err != nil {
+			log.Errorf("failed to close %s, %v", fn, err)
+		}
+		log.Errorf("failed to sync %s, %v", fn, err)
+		return err
+	}
+	return file.Close()
 }
 
 /*
@@ -370,14 +383,14 @@ func (c Client) initMaster() error {
 	}
 
 	if _, err := os.Stat("/etc/kubernetes"); os.IsNotExist(err) {
-		err = os.Mkdir("/etc/kubernetes", 0755)
+		err = os.Mkdir("/etc/kubernetes", 0750)
 		if err != nil {
 			return err
 		}
 	}
 
 	if _, err := os.Stat("/etc/kubernetes/manifests"); os.IsNotExist(err) {
-		err = os.Mkdir("/etc/kubernetes/manifests", 0755)
+		err = os.Mkdir("/etc/kubernetes/manifests", 0750)
 		if err != nil {
 			return err
 		}
@@ -393,9 +406,11 @@ func (c Client) initMaster() error {
 		return err
 	}
 
-	err = os.Mkdir("kustomize", 0755)
-	if err != nil {
-		return err
+	if _, err := os.Stat("kustomize"); os.IsNotExist(err) {
+		err = os.Mkdir("kustomize", 0750)
+		if err != nil {
+			return err
+		}
 	}
 	err = k.KustomizationFile("kustomize/kustomization.yaml")
 	if err != nil {
@@ -409,6 +424,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+
 	output, err := runner("kubeadm init --cri-socket /run/crio/crio.sock --config kubeadm.conf.yaml --upload-certs -k ./kustomize --skip-phases=preflight,addon/kube-proxy", 8 * time.Minute)
 	if err != nil {
 		return err
@@ -446,7 +462,7 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	_, err = readKey("/etc/kubernetes/pki/sa.pub")
+	_, err = readKey()
 	if err != nil {
 		return err
 	}
@@ -458,7 +474,7 @@ func runner(command string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel() // The cancel should be deferred so resources are cleaned up
 
-	// Create the command with our context
+	// #nosec @TODO have every intention cleaning this up later, however this is a private function, and we're going to move most logic into go Create the command with our context
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", command)
 
 	// This time we can simply use Output() to get the result.
@@ -507,7 +523,8 @@ type keyResponse struct {
 	Keys []jose.JSONWebKey `json:"keys"`
 }
 
-func readKey(filename string) (*keyResponse, error) {
+func readKey() (*keyResponse, error) {
+	filename := "/etc/kubernetes/pki/sa.pub"
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.WithMessage(err, "error reading file")

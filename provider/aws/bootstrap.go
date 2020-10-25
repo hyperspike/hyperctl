@@ -3,6 +3,7 @@ package aws
 import (
 	"crypto/tls"
 	"crypto/x509"
+	// #nosec
 	"crypto/sha1"
 	"encoding/hex"
 
@@ -1784,6 +1785,7 @@ func (c Client) createTable(name string) (string, error) {
 func getCert(address string) (*x509.Certificate, error) {
 	conn, err := tls.Dial("tcp", address, &tls.Config{
 		InsecureSkipVerify: false,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		log.Errorf("failed to connect to %s %v", address, err)
@@ -1817,6 +1819,7 @@ func (c Client) oidcIAM(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// #nosec
 	sum := sha1.Sum(cert.Raw)
 	thumb := hex.EncodeToString(sum[:])
 	svc := iam.New(c.Cfg)

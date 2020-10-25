@@ -6,6 +6,7 @@ import (
 	"time"
 	"strconv"
 	"strings"
+	// #nosec
 	"crypto/sha1"
 	"encoding/hex"
 	"context"
@@ -49,6 +50,7 @@ func Init(region, cidr, service string) Client {
 	}
 	c.Localized = false
 
+	// #nosec
 	h := sha1.New()
 	_, err = io.WriteString(h, strconv.FormatInt(time.Now().Unix(),10))
 	if err != nil {

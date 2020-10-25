@@ -75,7 +75,7 @@ func writeKube(client linodego.Client, id int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile("kubeconfig", []byte(kube), 0644)
+	err = ioutil.WriteFile("kubeconfig", []byte(kube), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

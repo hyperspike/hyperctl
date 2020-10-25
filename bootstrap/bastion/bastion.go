@@ -40,6 +40,7 @@ func New(ip string, port int, key []byte, user string) *Host {
 				ssh.PublicKeys(signer),
 			},
 			Timeout: dur,
+			// #nosec we're okay using this as I don't want to pollute host machine with keys
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
 		Client:  nil,
@@ -132,7 +133,10 @@ func (h *Host) Run(commands []string) error {
 }
 
 func (h *Host) Close() {
-	h.Client.Close()
+	err := h.Client.Close()
+	if err != nil {
+		log.Errorf("failed to close ssh connection %v", err)
+	}
 	h.Client = nil
 }
 

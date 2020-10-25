@@ -160,17 +160,29 @@ func (c *KubeConf) KubeadmFile(fn string) error {
 		log.Errorf("failed to create %s %v", fn, err)
 		return err
 	}
-	defer file.Close()
 
 	str, err := c.KubeadmYaml()
 	if err != nil {
+		if err := file.Close() ; err != nil {
+			log.Errorf("failed to close %s, %v", fn, err)
+		}
 		return err
 	}
 	_, err = io.WriteString(file, str)
 	if err != nil {
+		if err := file.Close() ; err != nil {
+			log.Errorf("failed to close %s, %v", fn, err)
+		}
 		log.Errorf("failed to write %s, %v", fn, err)
 		return err
 	}
 
-	return file.Sync()
+	if err := file.Sync(); err != nil {
+		if err := file.Close() ; err != nil {
+			log.Errorf("failed to close %s, %v", fn, err)
+		}
+		log.Errorf("failed to sync %s, %v", fn, err)
+		return err
+	}
+	return file.Close()
 }
