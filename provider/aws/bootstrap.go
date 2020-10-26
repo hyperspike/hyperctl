@@ -330,6 +330,30 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
+	err = c.AttachPolicy("master-"+c.Id, "arr:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, "arr:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
+	if err != nil {
+		return
+	}
+	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
+	if err != nil {
+		return
+	}
 
 	masterProfile, err := c.instanceProfile("master-"+c.Id)
 	if err != nil {

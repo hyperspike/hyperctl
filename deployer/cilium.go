@@ -122,7 +122,7 @@ func ciliumConfigMap(pods, cluster string) *corev1.ConfigMap { // {{{
 			"hubble-metrics-server": ":9092",
 			"hubble-metrics": "dns:query;ignoreAAAA,drop,tcp,flow,port-distribution,icmp,http",
 			"hubble-listen-address": ":4244",
-			"ipam": "cluster-pool",
+			"ipam": "eni",
 			"cluster-pool-ipv4-cidr": pods,
 			"cluster-pool-ipv4-mask-size": "24",
 			"disable-cnp-status-updates": "true",
