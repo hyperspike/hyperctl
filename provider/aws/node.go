@@ -381,6 +381,9 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+	if m.Initialized {
+		return errors.Errorf("control plane %s already initialized", c.ClusterName())
+	}
 
 	if _, err := os.Stat("/etc/kubernetes"); os.IsNotExist(err) {
 		err = os.Mkdir("/etc/kubernetes", 0750)
