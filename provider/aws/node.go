@@ -92,6 +92,19 @@ func (c *Client) Boot() error {
 
 func (c Client) startNode() error {
 
+	// @TODO new node join logic
+	/* for {
+			if notInitialized() {
+				sleep 10
+			} else {
+				joinCluster
+				if err
+					log
+				else
+					break
+			}
+		}
+	*/
 	endpoint, err := c.GetAPIEndpoint()
 	if err != nil {
 		log.Error("error fetching endpoint", err)
