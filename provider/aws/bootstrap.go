@@ -330,7 +330,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	err = c.AttachPolicy("master-"+c.Id, "arr:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
 	if err != nil {
 		return
 	}
@@ -342,7 +342,7 @@ func (c Client) CreateCluster() {
 	if err != nil {
 		return
 	}
-	err = c.AttachPolicy("node-"+c.Id, "arr:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
 	if err != nil {
 		return
 	}
@@ -1603,6 +1603,36 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 	}
 
 	log.Println(result)
+
+	hcInput := &elasticloadbalancing.ConfigureHealthCheckInput{
+		HealthCheck: &elasticloadbalancing.HealthCheck{
+			HealthyThreshold:   aws.Int64(2),
+			Interval:           aws.Int64(10),
+			Target:             aws.String("HTTPS:6443/healthz"),
+			Timeout:            aws.Int64(5),
+			UnhealthyThreshold: aws.Int64(2),
+		},
+		LoadBalancerName: aws.String(name),
+	}
+
+	hcReq := svc.ConfigureHealthCheckRequest(hcInput)
+	_, err = hcReq.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case elasticloadbalancing.ErrCodeAccessPointNotFoundException:
+				log.Println(elasticloadbalancing.ErrCodeAccessPointNotFoundException, aerr.Error())
+			default:
+				log.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Println(err.Error())
+		}
+		return "", err
+	}
+
 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
