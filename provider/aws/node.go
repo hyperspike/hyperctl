@@ -80,7 +80,7 @@ func (c *Client) Boot() error {
 			return err
 		}
 	} else {
-		err := c.startNode()
+		err := c.startNode(0)
 		if err != nil {
 			log.Errorf("Failed to start node %v\n", err)
 			return err
@@ -90,40 +90,38 @@ func (c *Client) Boot() error {
 }
 
 
-func (c Client) startNode() error {
+func (c Client) startNode(count int) error {
 
-	// @TODO new node join logic
-	/* for {
-			if notInitialized() {
-				sleep 10
-			} else {
-				joinCluster
-				if err
-					log
-				else
-					break
-			}
+	if count > 35 {
+		return errors.New("giving up joining cluster after 35 tries")
+	}
+	if init, _ := c.controlPlaneInitialized(); init {
+		endpoint, err := c.GetAPIEndpoint()
+		if err != nil {
+			log.Error("error fetching endpoint", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
 		}
-	*/
-	endpoint, err := c.GetAPIEndpoint()
-	if err != nil {
-		log.Error("error fetching endpoint", err)
-		return err
-	}
-	token, err := c.GetAPIToken()
-	if err != nil {
-		log.Error("error getting token", err)
-		return err
-	}
-	caHash, err := c.GetAPICAHash()
-	if err != nil {
-		log.Error("error getting CA Hash", err)
-		return err
-	}
-	// @TODO Kubeadm commands should probably hook into the Go Module
-	_, err = runner("kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
-	if err != nil {
-		return err
+		token, err := c.GetAPIToken()
+		if err != nil {
+			log.Error("error getting token", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
+		}
+		caHash, err := c.GetAPICAHash()
+		if err != nil {
+			log.Error("error getting CA Hash", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
+		}
+		// @TODO Kubeadm commands should probably hook into the Go Module
+		_, err = runner("kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
+		if err != nil {
+			return err
+		}
+	} else {
+		time.Sleep(time.Second * 20)
+		return c.startNode(count + 1)
 	}
 	return nil
 }
