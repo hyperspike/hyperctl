@@ -476,13 +476,41 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	_, err = readKey()
+	keyJson, err := readKey()
 	if err != nil {
+		return err
+	}
+	keyString := strings.ReplaceAll(string(keyJson), ":remove:", "")
+	if err := c.uploadString(c.ClusterName()+"-irsa", "/keys.json", keyString) ; err != nil {
+		return err
+	}
+
+	discoveryJson := `{
+    "issuer": "https://s3.`+c.InstanceRegion()+`.amazonaws.com/`+c.ClusterName()+`-irsa/",
+    "jwks_uri": "https://s3.`+c.InstanceRegion()+`.amazonaws.com/`+c.ClusterName()+`-irsa/keys.json",
+    "authorization_endpoint": "urn:kubernetes:programmatic_authorization",
+    "response_types_supported": [
+        "id_token"
+    ],
+    "subject_types_supported": [
+        "public"
+    ],
+    "id_token_signing_alg_values_supported": [
+        "RS256"
+    ],
+    "claims_supported": [
+        "sub",
+        "iss"
+    ]
+}`
+	if err := c.uploadString(c.ClusterName()+"-irsa", "/.well-known/openid-configuration", discoveryJson) ; err != nil {
 		return err
 	}
 
 	return nil
 }
+
+
 
 func runner(command string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -537,7 +565,7 @@ type keyResponse struct {
 	Keys []jose.JSONWebKey `json:"keys"`
 }
 
-func readKey() (*keyResponse, error) {
+func readKey() ([]byte, error) {
 	filename := "/etc/kubernetes/pki/sa.pub"
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -580,6 +608,8 @@ func readKey() (*keyResponse, error) {
 		Algorithm: string(alg),
 		Use:       "sig",
 	})
+	keys = append(keys, keys[0])
+	keys[1].KeyID = ":remove:"
 
-	return &keyResponse{Keys: keys}, nil
+	return json.MarshalIndent(&keyResponse{Keys: keys}, "", "    ")
 }

@@ -1671,6 +1671,32 @@ func (c Client) bucket(name string) (string, error) {
 	return "arn:aws:s3:::"+name, nil
 }
 
+func (c Client) uploadString(bucket, path, body string) error {
+	svc := s3.New(c.Cfg)
+	in := &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(path),
+		ACL:    s3.ObjectCannedACLPublicRead,
+	}
+	req := svc.PutObjectRequest(in)
+	_, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return err
+	}
+
+	return nil
+}
+
 func (c Client) createTable(name string) (string, error) {
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.CreateTableInput{
