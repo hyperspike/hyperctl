@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 
+	"bytes"
 	"context"
 	"net"
 	"strings"
@@ -1677,6 +1678,7 @@ func (c Client) uploadString(bucket, path, body string) error {
 		Bucket: aws.String(bucket),
 		Key:    aws.String(path),
 		ACL:    s3.ObjectCannedACLPublicRead,
+		Body:   bytes.NewReader([]byte(body)),
 	}
 	req := svc.PutObjectRequest(in)
 	_, err := req.Send(context.Background())
