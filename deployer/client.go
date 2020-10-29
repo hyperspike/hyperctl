@@ -4,7 +4,6 @@ import (
 	"context"
 	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/runtime"
-	// "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +21,12 @@ type Deployer struct {
 
 func New(endpoint, pods, cluster string) (*Deployer, error) {
 	_ = context.Background()
+	var c Deployer
+	c.endpoint = endpoint
+	c.pods = pods
+	c.cluster = cluster
+	c.ciliumVersion = hyperctl.CiliumVersion
+
 	cfg, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/admin.conf")
 	if err != nil {
 		log.Errorf("failed to read kube-config, %v", err)
@@ -33,14 +38,9 @@ func New(endpoint, pods, cluster string) (*Deployer, error) {
 	s := runtime.NewScheme()
 	_ = scheme.AddToScheme(s)
 
-	var c Deployer
 	c.r, err = client.New(kconfig, client.Options{
 		Scheme: s,
 	})
-	c.endpoint = endpoint
-	c.pods = pods
-	c.cluster = cluster
-	c.ciliumVersion = hyperctl.CiliumVersion
 	if err != nil {
 		log.Errorf("failed to build controller-runtime client, %v", err)
 		return nil, err

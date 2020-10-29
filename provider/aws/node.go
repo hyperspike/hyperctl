@@ -476,6 +476,10 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
+	err = d.IRSA()
+	if err != nil {
+		return nil
+	}
 	keyJson, err := readKey()
 	if err != nil {
 		return err
