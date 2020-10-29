@@ -71,12 +71,15 @@
 * [ ] Refactor to add concurrency
 * [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
+* [ ] Track global state
+* [ ] autocomplete on remote state search
 * [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Switch from fmt to log (like argonaut)
 
 ## Beta
 
+* [ ] Terraform provider
 * [ ] Edge node VPN access
 * [ ] Plugins
   * [ ] support cilium-etcd and etcd-operator (optional)
@@ -86,6 +89,5 @@
   * [ ] support CI (optional, requires ingress)
   * [ ] support CD (optional, requires ingress)
   * [ ] support Monitoring (optional, requires ingess)
-* [ ] Terraform provider
 * [ ] cluster-api provider and bootstrap
 * [ ] GCP Support
