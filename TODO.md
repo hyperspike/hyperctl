@@ -1,9 +1,7 @@
 
 ## Current Status
 
-* All command components for MVP have been created and tested. Cluster Join has been tested. Cluster upload needs to be tested.
-
-* Cilium and cloud-controller are done, just need to finish irsa, test deployment, and write admin.conf uploader. There could be a small issue with the api not being ready while we start uploading config.
+Everything upto the admin.conf uploader has been written. Control plane has been tested and verified, node join has been reworked, but should work. Need to do final testing on IRSA then MVP will be done.
 
 ## MVP
 
