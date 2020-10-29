@@ -7,6 +7,9 @@
 
 ## MVP
 
+<details><summary>See List</summary>
+<p>
+
 * [x] Tag based AMI search.
 * [x] Boot command
   * [x] join-nodes
@@ -64,6 +67,9 @@
   * [x] Auth
     - [x] Roles
 * [ ] upload admin.conf to secrets-manager, and support fetch to local
+
+</p>
+</details>
 
 ## Alpha
 
