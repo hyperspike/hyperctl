@@ -1679,6 +1679,7 @@ func (c Client) uploadString(bucket, path, body string) error {
 		Key:    aws.String(path),
 		ACL:    s3.ObjectCannedACLPublicRead,
 		Body:   bytes.NewReader([]byte(body)),
+		ContentType: aws.String("application/json"),
 	}
 	req := svc.PutObjectRequest(in)
 	_, err := req.Send(context.Background())

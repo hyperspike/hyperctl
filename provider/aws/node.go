@@ -485,7 +485,7 @@ func (c Client) initMaster() error {
 		return err
 	}
 	keyString := strings.ReplaceAll(string(keyJson), ":remove:", "")
-	if err := c.uploadString(c.ClusterName()+"-irsa", "/keys.json", keyString) ; err != nil {
+	if err := c.uploadString(c.ClusterName()+"-irsa", "keys.json", keyString) ; err != nil {
 		return err
 	}
 
@@ -507,7 +507,7 @@ func (c Client) initMaster() error {
         "iss"
     ]
 }`
-	if err := c.uploadString(c.ClusterName()+"-irsa", "/.well-known/openid-configuration", discoveryJson) ; err != nil {
+	if err := c.uploadString(c.ClusterName()+"-irsa", ".well-known/openid-configuration", discoveryJson) ; err != nil {
 		return err
 	}
 
