@@ -176,7 +176,7 @@ func irsaClusterRoleBinding() *rbacv1.ClusterRoleBinding { // {{{
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind: "ClusterRole",
-			Name: "pod-identity-webook",
+			Name: "pod-identity-webhook",
 		},
 		Subjects: []rbacv1.Subject{
 			{
