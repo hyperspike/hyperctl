@@ -8,7 +8,7 @@
 ## MVP
 
 * [x] Tag based AMI search.
-* [ ] Boot command
+* [x] Boot command
   * [x] join-nodes
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
@@ -21,7 +21,7 @@
     - [x] Check for Initialized
     - [x] api-server-aws-kms
     - [x] Join ring
-  * [ ] bootstrap-master
+  * [x] bootstrap-master
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock in dynamo
@@ -31,12 +31,12 @@
     - [x] set initialized-flag in dynamo
     - [x] kubeadm config template
     - [x] kustomize template
-    - [ ] Embed kube client and upload configs
+    - [x] Embed kube client and upload configs
       - [x] cilium
       - [x] cloud-controller ( should probably pull in PR to fix multi-eni )
-      - [ ] irsa deployment
+      - [x] irsa deployment
     - [x] api-server-aws-kms
-    - [ ] IRSA Upload
+    - [x] IRSA Upload
 * [x] Shell Completion
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
