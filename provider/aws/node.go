@@ -80,7 +80,7 @@ func (c *Client) Boot() error {
 			return err
 		}
 	} else {
-		err := c.startNode()
+		err := c.startNode(0)
 		if err != nil {
 			log.Errorf("Failed to start node %v\n", err)
 			return err
@@ -90,40 +90,38 @@ func (c *Client) Boot() error {
 }
 
 
-func (c Client) startNode() error {
+func (c Client) startNode(count int) error {
 
-	// @TODO new node join logic
-	/* for {
-			if notInitialized() {
-				sleep 10
-			} else {
-				joinCluster
-				if err
-					log
-				else
-					break
-			}
+	if count > 35 {
+		return errors.New("giving up joining cluster after 35 tries")
+	}
+	if init, _ := c.controlPlaneInitialized(); init {
+		endpoint, err := c.GetAPIEndpoint()
+		if err != nil {
+			log.Error("error fetching endpoint", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
 		}
-	*/
-	endpoint, err := c.GetAPIEndpoint()
-	if err != nil {
-		log.Error("error fetching endpoint", err)
-		return err
-	}
-	token, err := c.GetAPIToken()
-	if err != nil {
-		log.Error("error getting token", err)
-		return err
-	}
-	caHash, err := c.GetAPICAHash()
-	if err != nil {
-		log.Error("error getting CA Hash", err)
-		return err
-	}
-	// @TODO Kubeadm commands should probably hook into the Go Module
-	_, err = runner("kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
-	if err != nil {
-		return err
+		token, err := c.GetAPIToken()
+		if err != nil {
+			log.Error("error getting token", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
+		}
+		caHash, err := c.GetAPICAHash()
+		if err != nil {
+			log.Error("error getting CA Hash", err)
+			time.Sleep(time.Second * 20)
+			return c.startNode(count + 1)
+		}
+		// @TODO Kubeadm commands should probably hook into the Go Module
+		_, err = runner("kubeadm join --cri-socket unix:///run/crio/crio.sock " + endpoint + ":6443 --token " + token + " --discovery-token-ca-cert-hash " + caHash + " --skip-phases=preflight", 3 * time.Minute)
+		if err != nil {
+			return err
+		}
+	} else {
+		time.Sleep(time.Second * 20)
+		return c.startNode(count + 1)
 	}
 	return nil
 }
@@ -478,13 +476,45 @@ func (c Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	_, err = readKey()
+	err = d.IRSA()
 	if err != nil {
+		return nil
+	}
+	keyJson, err := readKey()
+	if err != nil {
+		return err
+	}
+	keyString := strings.ReplaceAll(string(keyJson), ":remove:", "")
+	if err := c.uploadString(c.ClusterName()+"-irsa", "keys.json", keyString) ; err != nil {
+		return err
+	}
+
+	discoveryJson := `{
+    "issuer": "https://s3.`+c.InstanceRegion()+`.amazonaws.com/`+c.ClusterName()+`-irsa/",
+    "jwks_uri": "https://s3.`+c.InstanceRegion()+`.amazonaws.com/`+c.ClusterName()+`-irsa/keys.json",
+    "authorization_endpoint": "urn:kubernetes:programmatic_authorization",
+    "response_types_supported": [
+        "id_token"
+    ],
+    "subject_types_supported": [
+        "public"
+    ],
+    "id_token_signing_alg_values_supported": [
+        "RS256"
+    ],
+    "claims_supported": [
+        "sub",
+        "iss"
+    ]
+}`
+	if err := c.uploadString(c.ClusterName()+"-irsa", ".well-known/openid-configuration", discoveryJson) ; err != nil {
 		return err
 	}
 
 	return nil
 }
+
+
 
 func runner(command string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -539,7 +569,7 @@ type keyResponse struct {
 	Keys []jose.JSONWebKey `json:"keys"`
 }
 
-func readKey() (*keyResponse, error) {
+func readKey() ([]byte, error) {
 	filename := "/etc/kubernetes/pki/sa.pub"
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -582,6 +612,8 @@ func readKey() (*keyResponse, error) {
 		Algorithm: string(alg),
 		Use:       "sig",
 	})
+	keys = append(keys, keys[0])
+	keys[1].KeyID = ":remove:"
 
-	return &keyResponse{Keys: keys}, nil
+	return json.MarshalIndent(&keyResponse{Keys: keys}, "", "    ")
 }

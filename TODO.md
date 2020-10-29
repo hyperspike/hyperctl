@@ -1,14 +1,15 @@
 
 ## Current Status
 
-* All command components for MVP have been created and tested. Cluster Join has been tested. Cluster upload needs to be tested.
-
-* Cilium and cloud-controller are done, just need to finish irsa, test deployment, and write admin.conf uploader. There could be a small issue with the api not being ready while we start uploading config.
+Everything upto the admin.conf uploader has been written. Control plane has been tested and verified, node join has been reworked, but should work. Need to do final testing on IRSA then MVP will be done.
 
 ## MVP
 
+<details><summary>See List</summary>
+<p>
+
 * [x] Tag based AMI search.
-* [ ] Boot command
+* [x] Boot command
   * [x] join-nodes
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
@@ -21,7 +22,7 @@
     - [x] Check for Initialized
     - [x] api-server-aws-kms
     - [x] Join ring
-  * [ ] bootstrap-master
+  * [x] bootstrap-master
     - [x] Calculate Cluster-name, and Node Type
     - [x] Fetch cluster info from dynamo (secret-name and cluster address)
     - [x] Check for lock in dynamo
@@ -31,12 +32,12 @@
     - [x] set initialized-flag in dynamo
     - [x] kubeadm config template
     - [x] kustomize template
-    - [ ] Embed kube client and upload configs
+    - [x] Embed kube client and upload configs
       - [x] cilium
       - [x] cloud-controller ( should probably pull in PR to fix multi-eni )
-      - [ ] irsa deployment
+      - [x] irsa deployment
     - [x] api-server-aws-kms
-    - [ ] IRSA Upload
+    - [x] IRSA Upload
 * [x] Shell Completion
 * [x] Util function to calculate subnets
 * [x] Embed version at build time
@@ -65,6 +66,9 @@
     - [x] Roles
 * [ ] upload admin.conf to secrets-manager, and support fetch to local
 
+</p>
+</details>
+
 ## Alpha
 
 * [ ] More Cilium configs, hubble, psp, serviceMonitors
@@ -76,6 +80,7 @@
 * [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Switch from fmt to log (like argonaut)
+* [ ] upload etcd-healthcheck-client keys
 
 ## Beta
 
