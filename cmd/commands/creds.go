@@ -30,14 +30,15 @@ func creds() *cobra.Command {
 				log.Errorf("failed to create %s, %v", "admin.conf", err)
 				return
 			}
-			_, err = f.WriteString(keys)
-			if err != nil {
+			if _, err = f.WriteString(keys); err != nil {
 				log.Errorf("failed to write to %s, %v", "admin.conf", err)
-				f.Close()
+				if err := f.Close(); err != nil {
+					log.Errorf("failed to close %s, %v", "admin.conf", err)
+					return
+				}
 				return
 			}
-			err = f.Close()
-			if err != nil {
+			if err := f.Close(); err != nil {
 				log.Errorf("failed to close %s, %v", "admin.conf", err)
 				return
 			}
