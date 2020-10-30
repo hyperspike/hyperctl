@@ -72,7 +72,7 @@ steps:
     - "cache"
 
 - name: release
-  image: grayshirt/kaniko
+  image: graytshirt/kaniko
   commands:
   - /executor
   when:
