@@ -2,7 +2,6 @@ package aws
 
 import (
 	"io"
-	"fmt"
 	"time"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"encoding/hex"
 	"context"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
@@ -81,26 +81,26 @@ func (c Client) accountId() {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case organizations.ErrCodeAccessDeniedException:
-				fmt.Println(organizations.ErrCodeAccessDeniedException, aerr.Error())
+				log.Error(organizations.ErrCodeAccessDeniedException, aerr.Error())
 			case organizations.ErrCodeAWSOrganizationsNotInUseException:
-				fmt.Println(organizations.ErrCodeAWSOrganizationsNotInUseException, aerr.Error())
+				log.Error(organizations.ErrCodeAWSOrganizationsNotInUseException, aerr.Error())
 			case organizations.ErrCodeInvalidInputException:
-				fmt.Println(organizations.ErrCodeInvalidInputException, aerr.Error())
+				log.Error(organizations.ErrCodeInvalidInputException, aerr.Error())
 			case organizations.ErrCodeServiceException:
-				fmt.Println(organizations.ErrCodeServiceException, aerr.Error())
+				log.Error(organizations.ErrCodeServiceException, aerr.Error())
 			case organizations.ErrCodeTooManyRequestsException:
-				fmt.Println(organizations.ErrCodeTooManyRequestsException, aerr.Error())
+				log.Error(organizations.ErrCodeTooManyRequestsException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Error(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Error(err.Error())
 		}
 		return
 	}
 
-	// fmt.Println(result)
+	// log.Error(result)
 	c.AccountID = *result.Accounts[0].Id
 }

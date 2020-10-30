@@ -455,7 +455,6 @@ func (c Client) initMaster() error {
 	var tokenHash string
 	r := regexp.MustCompile(`--discovery-token-ca-cert-hash`)
 	for _, line := range strings.Split(output,"\n") {
-		//fmt.Printf("%s: %t\n", line, r.MatchString(line))
 		if r.MatchString(line) {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
