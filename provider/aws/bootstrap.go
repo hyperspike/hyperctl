@@ -612,13 +612,28 @@ sudo hyperctl boot`)
 		return
 	}
 
-	err = c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA, "", 1, 1, 1, map[string]string{
+	if err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA, "", 1, 1, 1, map[string]string{
 		"Name": "Node - "+c.Id+" - A",
 		"KubernetesCluster": c.Id,
 		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 		"kubernetes.io/role/node": "1",
-	})
-	if err != nil {
+	}); err != nil {
+		return
+	}
+	if err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB, "", 1, 1, 1, map[string]string{
+		"Name": "Node - "+c.Id+" - B",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/node": "1",
+	}); err != nil {
+		return
+	}
+	if err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC, "", 1, 1, 1, map[string]string{
+		"Name": "Node - "+c.Id+" - C",
+		"KubernetesCluster": c.Id,
+		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		"kubernetes.io/role/node": "1",
+	}); err != nil {
 		return
 	}
 }
