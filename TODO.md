@@ -64,7 +64,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
     - [x] IRSA OpenID IAM
   * [x] Auth
     - [x] Roles
-* [ ] upload admin.conf to secrets-manager, and support fetch to local
+* [x] upload admin.conf to secrets-manager, and support fetch to local
 
 </p>
 </details>
