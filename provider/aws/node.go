@@ -513,6 +513,9 @@ func (c Client) initMaster() error {
 	if err := c.uploadAdminKeys(); err != nil {
 		return err
 	}
+	if err := d.EtcdCerts(); err != nil {
+		return err
+	}
 
 	return nil
 }

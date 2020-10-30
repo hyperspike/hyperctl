@@ -80,10 +80,11 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Switch from fmt to log (like argonaut)
-* [ ] upload etcd-healthcheck-client keys
+* [x] upload etcd-healthcheck-client keys
 
 ## Beta
 
+* [ ] arm support (not going to bother with user facing CLI, just machine images)
 * [ ] Terraform provider
 * [ ] Edge node VPN access
 * [ ] Plugins

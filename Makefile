@@ -3,6 +3,8 @@ DESTDIR ?=
 VERSION ?= $(shell  if [ ! -z $$(git tag --points-at HEAD) ] ; then git tag --points-at HEAD|cat ; else  git rev-parse --short HEAD|cat; fi )
 REGISTRY ?= graytshirt
 RUNTIME ?= docker
+GOOS ?= linux
+GOARCH ?= amd64
 
 default: build
 

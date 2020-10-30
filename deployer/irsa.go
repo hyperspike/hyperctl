@@ -44,7 +44,7 @@ func (d *Deployer) IRSA() error {
 	if err != nil {
 		return err
 	}
-	if err := d.r.Create(context.TODO(), createTlsSecret(cert, key)); err != nil {
+	if err := d.r.Create(context.TODO(), createIRSATlsSecret(cert, key)); err != nil {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
 	}
@@ -65,7 +65,12 @@ func (d *Deployer) IRSA() error {
 	return nil
 }
 
-func createTlsSecret(cert, key []byte) *corev1.Secret { // {{{
+func createIRSATlsSecret(cert, key []byte) *corev1.Secret { // {{{
+	return createTlsSecret(cert,key,"pod-identity-webhook","kube-system")
+}
+// }}}
+
+func createTlsSecret(cert, key []byte, name, namespace string) *corev1.Secret { // {{{
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind: "Secret",
