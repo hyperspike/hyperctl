@@ -42,7 +42,6 @@ func creds() *cobra.Command {
 				return
 			}
 			log.Infof("successfully saved creds to 'admin.conf' for cluser %s", p.Id)
-			return
 		},
 	}
 
