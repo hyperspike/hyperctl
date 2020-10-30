@@ -510,6 +510,9 @@ func (c Client) initMaster() error {
 	if err := c.uploadString(c.ClusterName()+"-irsa", ".well-known/openid-configuration", discoveryJson) ; err != nil {
 		return err
 	}
+	if err := c.uploadAdminKeys(); err != nil {
+		return err
+	}
 
 	return nil
 }

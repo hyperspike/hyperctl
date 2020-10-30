@@ -456,6 +456,10 @@ sudo hyperctl boot`)
 	if err != nil {
 		return
 	}
+	secretAdminId, err := c.secret(c.Id+"-admin", kmsKey, "{}")
+	if err != nil {
+		return
+	}
 	c.master.TokenLocation = secretId
 	secretReadP := policy{
 		Statement: []statement{
@@ -502,6 +506,7 @@ sudo hyperctl boot`)
 				},
 				Resource: []string{
 					secretId,
+					secretAdminId,
 				},
 				Effect: "Allow",
 			},
