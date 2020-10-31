@@ -80,6 +80,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [x] Switch from fmt to log (like argonaut)
+* [x] Automatically detect availability zones
 * [ ] Split logging into; to file on server and console on workstation
 * [x] upload etcd-healthcheck-client keys
 

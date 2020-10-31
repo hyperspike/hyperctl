@@ -113,16 +113,20 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	// @TODO get AZs by region search
-	masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, "use2-az1")
-	masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, "use2-az2")
-	masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, "use2-az3")
-	nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, "use2-az1")
-	nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, "use2-az2")
-	nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, "use2-az3")
-	edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, "use2-az1")
-	edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, "use2-az2")
-	edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, "use2-az3")
+	aZs, err := c.azs() // @TODO get AZs by region search
+	if err != nil {
+		return
+	}
+
+	masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, aZs[0])
+	masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, aZs[1])
+	masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, aZs[2])
+	nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, aZs[0])
+	nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, aZs[1])
+	nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, aZs[2])
+	edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, aZs[0])
+	edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, aZs[1])
+	edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, aZs[2])
 
 	gw  := c.gateway(vpc)
 
@@ -665,6 +669,41 @@ func (c Client) tagWithName(id string) {
 		"Name": c.Id,
 	})
 }
+func (c Client) azs() ([]string, error) {
+
+	svc := ec2.New(c.Cfg)
+	input := &ec2.DescribeAvailabilityZonesInput{
+		Filters: []ec2.Filter{
+			{
+				Name: aws.String("region-name"),
+				Values: []string{
+					c.Region,
+				},
+			},
+		},
+	}
+	req := svc.DescribeAvailabilityZonesRequest(input)
+	res, err := req.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				log.Error(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Error(err.Error())
+		}
+		return []string{}, err
+	}
+	var ret []string
+	for _, az := range res.AvailabilityZones {
+		ret = append(ret, *az.ZoneId)
+	}
+
+	return ret, nil
+}
 
 func (c Client) vpc(cidr string) string {
 	input := &ec2.CreateVpcInput{
@@ -695,7 +734,6 @@ func (c Client) vpc(cidr string) string {
 		},
 		VpcId: aws.String(*result.Vpc.VpcId),
 	}
-
 	reqDns := c.Ec2.ModifyVpcAttributeRequest(inputDns)
 	resDns, err := reqDns.Send(context.Background())
 	if err != nil {
