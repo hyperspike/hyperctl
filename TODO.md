@@ -72,7 +72,8 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 ## Alpha
 
 * [ ] More Cilium configs, hubble, psp, serviceMonitors
-* [ ] Refactor to add concurrency
+* [x] Refactor to add concurrency, use directed acyclic graph for dependency mapping?
+* [ ] fix alpine ami image
 * [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
 * [ ] Track global state

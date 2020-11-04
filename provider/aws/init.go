@@ -22,6 +22,7 @@ import (
 
 type Client struct {
 	Cfg aws.Config
+	state map[string][]string
 	Tags map[string]string
 	Id string
 	Ec2 *ec2.Client
@@ -44,6 +45,7 @@ func Init(region, cidr, service string) Client {
 	// credentials, and shared configuration files
 	var err error
 	var c Client
+	c.state = make(map[string][]string)
 	c.Cfg, err = external.LoadDefaultAWSConfig()
 	if err != nil {
 		panic("unable to load SDK config, " + err.Error())

@@ -17,7 +17,7 @@ type Ssh struct {
 	PublicKey  []byte
 }
 
-func New(bits int) Ssh {
+func New(bits int) *Ssh {
 	s := Ssh{
 		Bits: bits,
 	}
@@ -45,7 +45,7 @@ func New(bits int) Ssh {
 	}
 	*/
 
-	return s
+	return &s
 }
 
 // generatePrivateKey creates a RSA Private Key of specified byte size

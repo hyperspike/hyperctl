@@ -238,7 +238,7 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 	return nil
 }
 
-func (c Client) uploadClusterMeta(m masterData, initial bool) error {
+func (c Client) uploadClusterMeta(m masterData) error {
 	data, err := json.Marshal(m)
 	if err != nil {
 		log.Errorf("failed to marshal cluster metadata %v", err)
@@ -385,7 +385,6 @@ func machineID() error {
  * InitMaster is going to be funky as it needs to setup the cluster for things like CNI, AWS-IRSA, etc
  */
 func (c Client) initMaster() error {
-	// key=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
 	// @TODO Kubeadm commands should probably hook into the Go Module
 	log.Info("initializing control plane")
 	m, err := c.controlPlaneMeta()
@@ -459,7 +458,15 @@ func (c Client) initMaster() error {
 			tokenHash = strings.Trim(string(r.ReplaceAll([]byte(line), []byte("")))," \t\n\r")
 		}
 	}
-	err = c.uploadClusterMeta(masterData{Endpoint: m.Endpoint, TokenLocation: m.TokenLocation, CAHash: tokenHash, Initialized: true, KeyARN: m.KeyARN, Bucket: m.Bucket, Service: m.Service, Pods: m.Pods}, false)
+	err = c.uploadClusterMeta(masterData{
+		Endpoint: m.Endpoint,
+		TokenLocation: m.TokenLocation,
+		CAHash: tokenHash,
+		Initialized: true,
+		KeyARN: m.KeyARN,
+		Bucket: m.Bucket,
+		Service: m.Service,
+		Pods: m.Pods})
 	if err != nil {
 		return err
 	}

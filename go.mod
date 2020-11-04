@@ -3,6 +3,7 @@ module hyperspike.io/hyperctl
 go 1.15
 
 require (
+	github.com/andy2046/rund v0.1.0
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/aws/aws-sdk-go-v2 v0.24.0
 	github.com/google/goexpect v0.0.0-20200703111054-623d5ca06f56

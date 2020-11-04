@@ -15,6 +15,9 @@ import (
 	"encoding/base64"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/pkg/errors"
+	"github.com/andy2046/rund"
+
 	"hyperspike.io/hyperctl/auth/ssh"
 	"hyperspike.io/hyperctl/bootstrap/bastion"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -60,7 +63,34 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	vpc := c.vpc(vpcCidr.String())
+	run := rund.New()
+
+	var key *ssh.Ssh
+	sshFn := rund.NewFuncOperator(func () error {
+		key = ssh.New(4096)
+		err = key.WritePrivateKey("bastion-"+c.Id)
+		if err != nil {
+			return err
+		}
+		bastionKey := c.key(c.Id, key)
+		// throw away error as local
+		_ = c.saveState("bastionKey", []string{bastionKey}, false)
+		return nil
+	})
+	run.AddNode("ssh-keys", sshFn)
+
+	vpcFn := rund.NewFuncOperator(func() error {
+		vpc := c.vpc(vpcCidr.String())
+		if vpc == "" {
+			return errors.New("Failed to create VPC")
+		}
+		if err := c.saveState("vpc", []string{vpc}, true) ; err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("vpc", vpcFn)
+
 	podCidr, err := cidr.Subnet(vpcCidr, 4, 8)
 	if err != nil {
 		log.Println(err)
@@ -113,116 +143,471 @@ func (c Client) CreateCluster() {
 		return
 	}
 
-	aZs, err := c.azs() // @TODO get AZs by region search
-	if err != nil {
-		return
-	}
+	azsFn := rund.NewFuncOperator(func() error {
+		azs, err := c.azs()
+		if err != nil {
+			return err
+		}
+		_ = c.saveState("azs", azs, false)
+		return nil
+	})
+	run.AddNode("azs", azsFn)
 
-	masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, aZs[0])
-	masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, aZs[1])
-	masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, aZs[2])
-	nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, aZs[0])
-	nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, aZs[1])
-	nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, aZs[2])
-	edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, aZs[0])
-	edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, aZs[1])
-	edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, aZs[2])
+	/* state that will need to be destroyed
+	 *
+	 * VPC
+	 * loadbalancer
+	 * autoscaling groups
+	 * firewall nodes
+	 * launch templates
+	 * ssh key
+	 * KMS key
+	 * secret
+	 * dynamo table
+	 * IAM roles
+	 * IAM profiles
+	 * IAM identity provider
+	 */
 
-	gw  := c.gateway(vpc)
+	masterASubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("aZs", false)
+		masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, azs[0])
+		if masterA == "" {
+			return errors.New("failed to create Master A subnet")
+		}
+		_ = c.saveState("masterA", []string{masterA}, false)
+		return nil
+	})
+	run.AddNode("masterASubnet", masterASubnetFn)
+	run.AddEdge("vpc", "masterASubnet")
+	run.AddEdge("azs", "masterASubnet")
+	masterBSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("aZs", false)
+		masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, azs[1])
+		if masterB == "" {
+			return errors.New("failed to create Master B subnet")
+		}
+		_ = c.saveState("masterB", []string{masterB}, false)
+		return nil
+	})
+	run.AddNode("masterBSubnet", masterBSubnetFn)
+	run.AddEdge("vpc", "masterBSubnet")
+	run.AddEdge("azs", "masterBSubnet")
+	masterCSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("aZs", false)
+		masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, azs[2])
+		if masterC == "" {
+			return errors.New("failed to create Master C subnet")
+		}
+		_ = c.saveState("masterC", []string{masterC}, false)
+		return nil
+	})
+	run.AddNode("masterCSubnet", masterCSubnetFn)
+	run.AddEdge("vpc", "masterCSubnet")
+	run.AddEdge("azs", "masterCSubnet")
+	nodeASubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, azs[0])
+		if nodeA == "" {
+			return errors.New("failed to create Node A subnet")
+		}
+		_ = c.saveState("nodeA", []string{nodeA}, false)
+		return nil
+	})
+	run.AddNode("nodeASubnet", nodeASubnetFn)
+	run.AddEdge("vpc", "nodeASubnet")
+	run.AddEdge("azs", "nodeASubnet")
+	nodeBSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, azs[1])
+		if nodeB == "" {
+			return errors.New("failed to create Node B subnet")
+		}
+		_ = c.saveState("nodeB", []string{nodeB}, false)
+		return nil
+	})
+	run.AddNode("nodeBSubnet", nodeBSubnetFn)
+	run.AddEdge("vpc", "nodeBSubnet")
+	run.AddEdge("azs", "nodeBSubnet")
+	nodeCSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, azs[2])
+		if nodeC == "" {
+			return errors.New("failed to create Node C subnet")
+		}
+		_ = c.saveState("nodeC", []string{nodeC}, false)
+		return nil
+	})
+	run.AddNode("nodeCSubnet", nodeCSubnetFn)
+	run.AddEdge("vpc", "nodeCSubnet")
+	run.AddEdge("azs", "nodeCSubnet")
+	edgeASubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, azs[0])
+		if edgeA == "" {
+			return errors.New("failed to create Edge A subnet")
+		}
+		_ = c.saveState("edgeA", []string{edgeA}, false)
+		return nil
+	})
+	run.AddNode("edgeASubnet", edgeASubnetFn)
+	run.AddEdge("vpc", "edgeASubnet")
+	run.AddEdge("azs", "edgeASubnet")
+	edgeBSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, azs[1])
+		if edgeB == "" {
+			return errors.New("failed to create Edge B subnet")
+		}
+		_ = c.saveState("edgeB", []string{edgeB}, false)
+		return nil
+	})
+	run.AddNode("edgeBSubnet", edgeBSubnetFn)
+	run.AddEdge("vpc", "edgeBSubnet")
+	run.AddEdge("azs", "edgeBSubnet")
+	edgeCSubnetFn := rund.NewFuncOperator(func () error {
+		vpcs, _ := c.getState("vpc", false)
+		vpc := vpcs[0]
+		azs, _ := c.getState("azs", false)
+		edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, azs[2])
+		if edgeC == "" {
+			return errors.New("failed to create Edge C subnet")
+		}
+		_ = c.saveState("edgeC", []string{edgeC}, false)
+		return nil
+	})
+	run.AddNode("edgeCSubnet", edgeCSubnetFn)
+	run.AddEdge("vpc", "edgeCSubnet")
+	run.AddEdge("azs", "edgeCSubnet")
 
-	gwRoute  := c.routeTable(vpc, gw,  "0.0.0.0/0")
-	c.assocRoute(edgeA, gwRoute)
-	c.assocRoute(edgeB, gwRoute)
-	c.assocRoute(edgeC, gwRoute)
+	createGWFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		gw  := c.gateway(vpc[0])
+		if gw == "" {
+			return errors.New("failed to create internet gw")
+		}
+		_ = c.saveState("gw", []string{gw}, false)
+		return nil
+	})
+	run.AddNode("createGW", createGWFn)
+	run.AddEdge("vpc", "createGW")
 
-	edgeSg := c.securityGroup(vpc, "edge", "Edge Bastion")
-	masterSg := c.securityGroup(vpc, "master", "Master Nodes")
-	masterLbSg := c.securityGroup(vpc, "master-lb", "Master Load Balancer")
-	nodeSg := c.securityGroup(vpc, "node", "Worker Nodes")
+	createRouteFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		gw, _ := c.getState("gw", false)
+		gwRoute  := c.routeTable(vpc[0], gw[0],  "0.0.0.0/0")
+		if gwRoute == "" {
+			return errors.New("failed to create internet gw Route")
+		}
+		_ = c.saveState("gwRoute", []string{gwRoute}, false)
+		return nil
+	})
+	run.AddNode("createRoute", createRouteFn)
+	run.AddEdge("createGW", "createRoute")
 
-	edgeEgress := c.securityGroupRule(0, 0, "0.0.0.0/0", "-1", "egress")
-	edgeIngress := []ec2.IpPermission{}
-	edgeIngress = append(edgeIngress, c.securityGroupRule(22, 22, "0.0.0.0/0", "tcp", "ssh provisioning"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(22223, 22223, "0.0.0.0/0", "tcp", "ssh pivot"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(500, 500, "0.0.0.0/0", "udp", "500 IpSec"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(4500, 4500, "0.0.0.0/0", "udp", "4500 IpSec"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(443, 443, "0.0.0.0/0", "tcp", "https just in case"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "NAT Master security group"))
-	edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, nodeSg, "-1", "NAT Node security group"))
+	assocRouteEdgeA := rund.NewFuncOperator(func() error {
+		edgeA, _ := c.getState("edgeA", false)
+		gwRoute, _ := c.getState("gwRoute", false)
+		c.assocRoute(edgeA[0], gwRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteEdgeA", assocRouteEdgeA)
+	run.AddEdge("edgeA", "assocRouteEdgeA")
+	run.AddEdge("createRoute", "assocRouteEdgeA")
+	assocRouteEdgeB := rund.NewFuncOperator(func() error {
+		edgeB, _ := c.getState("edgeB", false)
+		gwRoute, _ := c.getState("gwRoute", false)
+		c.assocRoute(edgeB[0], gwRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteEdgeB", assocRouteEdgeB)
+	run.AddEdge("edgeB", "assocRouteEdgeB")
+	run.AddEdge("createRoute", "assocRouteEdgeB")
+	assocRouteEdgeC:= rund.NewFuncOperator(func() error {
+		edgeC, _ := c.getState("edgeC", false)
+		gwRoute, _ := c.getState("gwRoute", false)
+		c.assocRoute(edgeC[0], gwRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteEdgeC", assocRouteEdgeC)
+	run.AddEdge("edgeC", "assocRouteEdgeC")
+	run.AddEdge("createRoute", "assocRouteEdgeC")
+
+	edgeSgFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		edgeSg := c.securityGroup(vpc[0], "edge", "Edge Bastion")
+		if edgeSg == "" {
+			return errors.New("failed to create edge security group")
+		}
+		_ = c.saveState("edgeSg", []string{edgeSg}, false)
+		return nil
+	})
+	run.AddNode("edgeSg", edgeSgFn)
+	run.AddEdge("vpc", "edgeSg")
+	masterSgFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		masterSg := c.securityGroup(vpc[0], "master", "Master Nodes")
+		if masterSg == "" {
+			return errors.New("failed to create master security group")
+		}
+		_ = c.saveState("masterSg", []string{masterSg}, false)
+		return nil
+	})
+	run.AddNode("masterSg", masterSgFn)
+	run.AddEdge("vpc", "masterSg")
+	masterLBSgFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		masterLBSg := c.securityGroup(vpc[0], "master-lb", "Master Load Balancer")
+		if masterLBSg == "" {
+			return errors.New("failed to create master load balancer security group")
+		}
+		_ = c.saveState("masterLBSg", []string{masterLBSg}, false)
+		return nil
+	})
+	run.AddNode("masterLBSg", masterLBSgFn)
+	run.AddEdge("vpc", "masterLBSg")
+	nodeSgFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		nodeSg := c.securityGroup(vpc[0], "node", "Worker Nodes")
+		if nodeSg == "" {
+			return errors.New("failed to create node security group")
+		}
+		_ = c.saveState("nodeSg", []string{nodeSg}, false)
+		return nil
+	})
+	run.AddNode("nodeSg", nodeSgFn)
+	run.AddEdge("vpc", "nodeSg")
+
+	edgeSgRulesFn := rund.NewFuncOperator(func() error {
+		edgeSg, _ := c.getState("edgeSg", false)
+		masterSg, _ := c.getState("masterSg", false)
+		nodeSg, _ := c.getState("nodeSg", false)
+		// edgeEgress := c.securityGroupRule(0, 0, "0.0.0.0/0", "-1", "egress")
+		edgeIngress := []ec2.IpPermission{}
+		edgeIngress = append(edgeIngress, c.securityGroupRule(22, 22, "0.0.0.0/0", "tcp", "ssh provisioning"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(22223, 22223, "0.0.0.0/0", "tcp", "ssh pivot"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(500, 500, "0.0.0.0/0", "udp", "500 IpSec"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(4500, 4500, "0.0.0.0/0", "udp", "4500 IpSec"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(443, 443, "0.0.0.0/0", "tcp", "https just in case"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, masterSg[0], "-1", "NAT Master security group"))
+		edgeIngress = append(edgeIngress, c.securityGroupRule(0, 65535, nodeSg[0], "-1", "NAT Node security group"))
+		c.securityGroupRuleApply(edgeSg[0], edgeIngress, Ingress)
+		return nil
+	})
+	run.AddNode("edgeSgRules", edgeSgRulesFn)
+	run.AddEdge("nodeSg", "edgeSgRules")
+	run.AddEdge("masterSg", "edgeSgRules")
+	run.AddEdge("edgeSg", "edgeSgRules")
+
+	/*
 	c.securityGroupRuleApply(edgeSg, []ec2.IpPermission{edgeEgress}, Egress)
-
-	c.securityGroupRuleApply(edgeSg, edgeIngress, Ingress)
 	c.securityGroupRuleApply(masterSg, []ec2.IpPermission{edgeEgress}, Egress)
 	c.securityGroupRuleApply(masterLbSg, []ec2.IpPermission{edgeEgress}, Egress)
 	c.securityGroupRuleApply(nodeSg, []ec2.IpPermission{edgeEgress}, Egress)
+	*/
 
-	masterIngress := []ec2.IpPermission{}
-	masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, podCidr.String(), "tcp", "Allow pods to get API info"))
-	masterIngress = append(masterIngress, c.securityGroupRule(443, 443, podCidr.String(), "tcp", "Allow pods to get API info"))
-	masterIngress = append(masterIngress, c.securityGroupRule(53, 53, podCidr.String(), "udp", "Allow pods to get DNS"))
-	masterIngress = append(masterIngress, c.securityGroupRule(22, 22, edgeSg, "tcp", "ssh provisioning"))
-	masterIngress = append(masterIngress, c.securityGroupRule(443, 443, nodeSg, "tcp", "Allow nodes to API"))
-	masterIngress = append(masterIngress, c.securityGroupRule(0, 65535, masterSg, "-1", "master master communication"))
-	masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, masterLbSg, "tcp", "master-lb master communication"))
-	c.securityGroupRuleApply(masterSg, masterIngress, Ingress)
-	masterLbIngress := []ec2.IpPermission{}
-	masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, edgeSg, "tcp", "VPN Users to get kubectl"))
-	masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, nodeSg, "tcp", "Nodes to API"))
-	masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, masterSg, "tcp", "Nodes to API"))
-	c.securityGroupRuleApply(masterLbSg, masterLbIngress, Ingress)
-	nodeIngress := []ec2.IpPermission{}
-	nodeIngress = append(nodeIngress, c.securityGroupRule(10250, 10250, masterSg, "tcp", "master to kubelet"))
-	nodeIngress = append(nodeIngress, c.securityGroupRule(1024, 65535, masterSg, "tcp", "Pod Comunication"))
-	nodeIngress = append(nodeIngress, c.securityGroupRule(0, 65535, nodeSg, "-1", "node to node"))
-	nodeIngress = append(nodeIngress, c.securityGroupRule(22, 22, edgeSg, "tcp", "edge ssh"))
-	c.securityGroupRuleApply(nodeSg, nodeIngress, Ingress)
+	masterSgRulesFn := rund.NewFuncOperator(func() error {
+		edgeSg, _ := c.getState("edgeSg", false)
+		masterSg, _ := c.getState("masterSg", false)
+		masterLBSg, _ := c.getState("masterLBSg", false)
+		nodeSg, _ := c.getState("nodeSg", false)
+		masterIngress := []ec2.IpPermission{}
+		masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, podCidr.String(), "tcp", "Allow pods to get API info"))
+		masterIngress = append(masterIngress, c.securityGroupRule(443, 443, podCidr.String(), "tcp", "Allow pods to get API info"))
+		masterIngress = append(masterIngress, c.securityGroupRule(53, 53, podCidr.String(), "udp", "Allow pods to get DNS"))
+		masterIngress = append(masterIngress, c.securityGroupRule(22, 22, edgeSg[0], "tcp", "ssh provisioning"))
+		masterIngress = append(masterIngress, c.securityGroupRule(443, 443, nodeSg[0], "tcp", "Allow nodes to API"))
+		masterIngress = append(masterIngress, c.securityGroupRule(0, 65535, masterSg[0], "-1", "master master communication"))
+		masterIngress = append(masterIngress, c.securityGroupRule(6443, 6443, masterLBSg[0], "tcp", "master-lb master communication"))
+		c.securityGroupRuleApply(masterSg[0], masterIngress, Ingress)
+		return nil
+	})
+	run.AddNode("masterSgRules", masterSgRulesFn)
+	run.AddEdge("nodeSg", "masterSgRules")
+	run.AddEdge("masterSg", "masterSgRules")
+	run.AddEdge("edgeSg", "masterSgRules")
+	run.AddEdge("masterLBSg", "masterSgRules")
 
-	key := ssh.New(4096)
-	err = key.WritePrivateKey("bastion-"+c.Id)
-	if err != nil {
-		return
-	}
-	bastionKey := c.key(c.Id, key)
+	masterLBSgRulesFn := rund.NewFuncOperator(func() error {
+		edgeSg, _ := c.getState("edgeSg", false)
+		masterSg, _ := c.getState("masterSg", false)
+		masterLBSg, _ := c.getState("masterLBSg", false)
+		nodeSg, _ := c.getState("nodeSg", false)
+		masterLbIngress := []ec2.IpPermission{}
+		masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, edgeSg[0], "tcp", "VPN Users to get kubectl"))
+		masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, nodeSg[0], "tcp", "Nodes to API"))
+		masterLbIngress = append(masterLbIngress, c.securityGroupRule(6443, 6443, masterSg[0], "tcp", "Nodes to API"))
+		c.securityGroupRuleApply(masterLBSg[0], masterLbIngress, Ingress)
+		return nil
+	})
+	run.AddNode("masterLBSgRules", masterLBSgRulesFn)
+	run.AddEdge("nodeSg", "masterLBSgRules")
+	run.AddEdge("masterSg", "masterLBSgRules")
+	run.AddEdge("edgeSg", "masterLBSgRules")
+	run.AddEdge("masterLBSg", "masterLBSgRules")
+
+	nodeSgRulesFn := rund.NewFuncOperator(func() error {
+		edgeSg, _ := c.getState("edgeSg", false)
+		masterSg, _ := c.getState("masterSg", false)
+		// masterLBSg, _ := c.getState("masterLBSg", false)
+		nodeSg, _ := c.getState("nodeSg", false)
+		nodeIngress := []ec2.IpPermission{}
+		nodeIngress = append(nodeIngress, c.securityGroupRule(10250, 10250, masterSg[0], "tcp", "master to kubelet"))
+		nodeIngress = append(nodeIngress, c.securityGroupRule(1024, 65535, masterSg[0], "tcp", "Pod Comunication"))
+		nodeIngress = append(nodeIngress, c.securityGroupRule(0, 65535, nodeSg[0], "-1", "node to node"))
+		nodeIngress = append(nodeIngress, c.securityGroupRule(22, 22, edgeSg[0], "tcp", "edge ssh"))
+		c.securityGroupRuleApply(nodeSg[0], nodeIngress, Ingress)
+		return nil
+	})
+	run.AddNode("nodeSgRules", nodeSgRulesFn)
+	run.AddEdge("nodeSg", "nodeSgRules")
+	run.AddEdge("masterSg", "nodeSgRules")
+	run.AddEdge("edgeSg", "nodeSgRules")
+
 	/* @TODO fix hardcoded AMI
 	 * Move to Edge Nodes with Cilium XDP Load Balancing
 	 */
-	fwA, _ := c.instance(&Instance{name:"Firewall - 1", ami:"ami-008a61f78ba92b950", key:bastionKey, subnet:edgeA, sg:edgeSg, nat: true})
-
-	natRoute := c.routeTable(vpc, fwA.id, "0.0.0.0/0")
-	c.assocRoute(masterA, natRoute)
-	c.assocRoute(masterB, natRoute)
-	c.assocRoute(masterC, natRoute)
-	c.assocRoute(nodeA, natRoute)
-	c.assocRoute(nodeB, natRoute)
-	c.assocRoute(nodeC, natRoute)
-	fwHostA := bastion.New(fwA.public + "/32" , 22, key.PrivateKey, "alpine")
-	err = fwHostA.Run([]string{
-		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
-		"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
-		"sudo apk update",
-		//"sudo apk add -u openssh iptables suricata",
-		"sudo apk add -u openssh iptables",
-		`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
-		"sudo rc-service sshd restart",
-		//"sudo rc-update add suricata default",
-		//"sudo rc-service suricata start",
-		"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
-		"sudo sysctl -p",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterBCidr.String() + " -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterCCidr.String() + " -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
-		"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
-		//"sudo iptables -I INPUT -j NFQUEUE",
-		//"sudo iptables -I OUTPUT -j NFQUEUE",
-		//"sudo iptables -t nat -I INPUT -j NFQUEUE",
-		//"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
-		"sudo rc-service iptables save",
+	fwAFn := rund.NewFuncOperator(func() error {
+		bastionKey, _ := c.getState("bastionKey", false)
+		edgeA, _      := c.getState("edgeA", false)
+		edgeSg, _     := c.getState("edgeSg", false)
+		fwA, err := c.instance(&Instance{
+			name: "Firewall - 1",
+			ami: "ami-008a61f78ba92b950",
+			key: bastionKey[0],
+			subnet: edgeA[0],
+			sg: edgeSg[0],
+			nat: true})
+		if err != nil {
+			log.Errorf("failed to create fireware instance, %v", err)
+			return err
+		}
+		_ = c.saveState("fwA", []string{fwA.id, fwA.public}, false)
+		return nil
 	})
-	if err != nil {
-		return
-	}
+	run.AddNode("fwA", fwAFn)
+	run.AddEdge("edgeA", "fwA")
+	run.AddEdge("ssh-keys", "fwA")
+	run.AddEdge("edgeSg", "fwA")
+
+	natRouteFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		fwA, _ := c.getState("fwA", false)
+		natRoute := c.routeTable(vpc[0], fwA[0], "0.0.0.0/0")
+		if natRoute == "" {
+			return errors.New("failed to create nat route")
+		}
+		_ = c.saveState("natRoute", []string{natRoute}, false)
+		return nil
+	})
+	run.AddNode("natRoute", natRouteFn)
+	run.AddEdge("fwA", "natRoute")
+
+	assocRouteMasterA := rund.NewFuncOperator(func() error {
+		masterA, _ := c.getState("masterA", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(masterA[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteMasterA", assocRouteMasterA)
+	run.AddEdge("natRoute", "assocRouteMasterA")
+	run.AddEdge("masterASubnet", "assocRouteMasterA")
+	assocRouteMasterB := rund.NewFuncOperator(func() error {
+		masterB, _ := c.getState("masterB", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(masterB[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteMasterB", assocRouteMasterB)
+	run.AddEdge("natRoute", "assocRouteMasterB")
+	run.AddEdge("masterASubnet", "assocRouteMasterB")
+	assocRouteMasterC := rund.NewFuncOperator(func() error {
+		masterC, _ := c.getState("masterC", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(masterC[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteMasterC", assocRouteMasterC)
+	run.AddEdge("natRoute", "assocRouteMasterC")
+	run.AddEdge("masterCSubnet", "assocRouteMasterC")
+	assocRouteNodeA := rund.NewFuncOperator(func() error {
+		nodeA, _ := c.getState("nodeA", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(nodeA[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteNodeA", assocRouteNodeA)
+	run.AddEdge("natRoute", "assocRouteNodeA")
+	run.AddEdge("nodeASubnet", "assocRouteNodeA")
+	assocRouteNodeB := rund.NewFuncOperator(func() error {
+		nodeB, _ := c.getState("nodeB", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(nodeB[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteNodeB", assocRouteNodeB)
+	run.AddEdge("natRoute", "assocRouteNodeB")
+	run.AddEdge("nodeBSubnet", "assocRouteNodeB")
+	assocRouteNodeC := rund.NewFuncOperator(func() error {
+		nodeC, _ := c.getState("nodeC", false)
+		natRoute, _ := c.getState("natRoute", false)
+		c.assocRoute(nodeC[0], natRoute[0])
+		return nil
+	})
+	run.AddNode("assocRouteNodeC", assocRouteNodeC)
+	run.AddEdge("natRoute", "assocRouteNodeC")
+	run.AddEdge("nodeCSubnet", "assocRouteNodeC")
+
+	provisionFwA := rund.NewFuncOperator(func() error {
+		fwA, _ := c.getState("fwA", false)
+		fwHostA := bastion.New(fwA[1] + "/32" , 22, key.PrivateKey, "alpine")
+		err = fwHostA.Run([]string{
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
+			"sudo apk update",
+			//"sudo apk add -u openssh iptables suricata",
+			"sudo apk add -u openssh iptables",
+			`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
+			"sudo rc-service sshd restart",
+			//"sudo rc-update add suricata default",
+			//"sudo rc-service suricata start",
+			"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
+			"sudo sysctl -p",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterCCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
+			//"sudo iptables -I INPUT -j NFQUEUE",
+			//"sudo iptables -I OUTPUT -j NFQUEUE",
+			//"sudo iptables -t nat -I INPUT -j NFQUEUE",
+			//"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
+			"sudo rc-service iptables save",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("provisionFwA", provisionFwA)
+	run.AddEdge("fwA", "provisionFwA")
 
 	r := role{
 		Statement: []roleStatement{
@@ -236,410 +621,709 @@ func (c Client) CreateCluster() {
 			},
 		},
 	}
-	_, err = c.CreateRole("master-"+c.Id, r)
-	if err != nil {
-		return
-	}
-	_, err = c.CreateRole("node-"+c.Id, r)
-	if err != nil {
-		return
-	}
-	mGP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"ec2:DescribeInstances",
-					"ec2:DescribeRegions",
-					"ec2:DescribeRouteTables",
-					"ec2:DescribeSecurityGroups",
-					"ec2:DescribeSubnets",
-					"ec2:DescribeVolumes",
-					"ec2:CreateSecurityGroup",
-					"ec2:CreateTags",
-					"ec2:CreateVolume",
-					"ec2:ModifyInstanceAttribute",
-					"ec2:ModifyVolume",
-					"ec2:AttachVolume",
-					"ec2:AuthorizeSecurityGroupIngress",
-					"ec2:CreateRoute",
-					"ec2:DeleteRoute",
-					"ec2:DeleteSecurityGroup",
-					"ec2:DeleteVolume",
-					"ec2:DetachVolume",
-					"ec2:RevokeSecurityGroupIngress",
-					"ec2:DescribeVpcs",
-					"elasticloadbalancing:AddTags",
-					"elasticloadbalancing:AttachLoadBalancerToSubnets",
-					"elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
-					"elasticloadbalancing:CreateLoadBalancer",
-					"elasticloadbalancing:CreateLoadBalancerPolicy",
-					"elasticloadbalancing:CreateLoadBalancerListeners",
-					"elasticloadbalancing:ConfigureHealthCheck",
-					"elasticloadbalancing:DeleteLoadBalancer",
-					"elasticloadbalancing:DeleteLoadBalancerListeners",
-					"elasticloadbalancing:DescribeLoadBalancers",
-					"elasticloadbalancing:DescribeLoadBalancerAttributes",
-					"elasticloadbalancing:DetachLoadBalancerFromSubnets",
-					"elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
-					"elasticloadbalancing:ModifyLoadBalancerAttributes",
-					"elasticloadbalancing:RegisterInstancesWithLoadBalancer",
-					"elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
-					"elasticloadbalancing:AddTags",
-					"elasticloadbalancing:CreateListener",
-					"elasticloadbalancing:CreateTargetGroup",
-					"elasticloadbalancing:DeleteListener",
-					"elasticloadbalancing:DeleteTargetGroup",
-					"elasticloadbalancing:DescribeListeners",
-					"elasticloadbalancing:DescribeLoadBalancerPolicies",
-					"elasticloadbalancing:DescribeTargetGroups",
-					"elasticloadbalancing:DescribeTargetHealth",
-					"elasticloadbalancing:ModifyListener",
-					"elasticloadbalancing:ModifyTargetGroup",
-					"elasticloadbalancing:RegisterTargets",
-					"elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+	masterRole := rund.NewFuncOperator(func() error {
+		_, err = c.CreateRole("master-"+c.Id, r)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("masterRole", masterRole)
+	nodeRole := rund.NewFuncOperator(func() error {
+		_, err = c.CreateRole("node-"+c.Id, r)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("nodeRole", nodeRole)
+	masterGeneralPolicy := rund.NewFuncOperator(func() error {
+		mGP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"ec2:DescribeInstances",
+						"ec2:DescribeRegions",
+						"ec2:DescribeRouteTables",
+						"ec2:DescribeSecurityGroups",
+						"ec2:DescribeSubnets",
+						"ec2:DescribeVolumes",
+						"ec2:CreateSecurityGroup",
+						"ec2:CreateTags",
+						"ec2:CreateVolume",
+						"ec2:ModifyInstanceAttribute",
+						"ec2:ModifyVolume",
+						"ec2:AttachVolume",
+						"ec2:AuthorizeSecurityGroupIngress",
+						"ec2:CreateRoute",
+						"ec2:DeleteRoute",
+						"ec2:DeleteSecurityGroup",
+						"ec2:DeleteVolume",
+						"ec2:DetachVolume",
+						"ec2:RevokeSecurityGroupIngress",
+						"ec2:DescribeVpcs",
+						"elasticloadbalancing:AddTags",
+						"elasticloadbalancing:AttachLoadBalancerToSubnets",
+						"elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+						"elasticloadbalancing:CreateLoadBalancer",
+						"elasticloadbalancing:CreateLoadBalancerPolicy",
+						"elasticloadbalancing:CreateLoadBalancerListeners",
+						"elasticloadbalancing:ConfigureHealthCheck",
+						"elasticloadbalancing:DeleteLoadBalancer",
+						"elasticloadbalancing:DeleteLoadBalancerListeners",
+						"elasticloadbalancing:DescribeLoadBalancers",
+						"elasticloadbalancing:DescribeLoadBalancerAttributes",
+						"elasticloadbalancing:DetachLoadBalancerFromSubnets",
+						"elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+						"elasticloadbalancing:ModifyLoadBalancerAttributes",
+						"elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+						"elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
+						"elasticloadbalancing:AddTags",
+						"elasticloadbalancing:CreateListener",
+						"elasticloadbalancing:CreateTargetGroup",
+						"elasticloadbalancing:DeleteListener",
+						"elasticloadbalancing:DeleteTargetGroup",
+						"elasticloadbalancing:DescribeListeners",
+						"elasticloadbalancing:DescribeLoadBalancerPolicies",
+						"elasticloadbalancing:DescribeTargetGroups",
+						"elasticloadbalancing:DescribeTargetHealth",
+						"elasticloadbalancing:ModifyListener",
+						"elasticloadbalancing:ModifyTargetGroup",
+						"elasticloadbalancing:RegisterTargets",
+						"elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+					},
+					Resource: []string{
+						"*",
+					},
+					Effect: "Allow",
 				},
-				Resource: []string{
-					"*",
-				},
-				Effect: "Allow",
 			},
-		},
-	}
-	masterPolicy, err := c.CreatePolicy("master-general-"+c.Id, mGP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, masterPolicy)
-	if err != nil {
-		return
-	}
-	nGP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"ec2:DescribeInstances",
-					"ec2:DescribeRegions",
+		}
+		masterPolicy, err := c.CreatePolicy("master-general-"+c.Id, mGP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("masterGeneralPolicy", []string{masterPolicy}, true)
+	})
+	run.AddNode("masterGeneralPolicy", masterGeneralPolicy)
+
+	attachMasterPolicy := rund.NewFuncOperator(func() error {
+		masterPolicy, _ := c.getState("masterGeneralPolicy", false)
+		err = c.AttachPolicy("master-"+c.Id, masterPolicy[0])
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachMasterPolicy", attachMasterPolicy)
+	run.AddEdge("masterGeneralPolicy", "attachMasterPolicy")
+	run.AddEdge("masterRole", "attachMasterPolicy")
+
+	nodeGeneralPolicy := rund.NewFuncOperator(func() error {
+		nGP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"ec2:DescribeInstances",
+						"ec2:DescribeRegions",
+					},
+					Resource: []string{
+						"*",
+					},
+					Effect: "Allow",
 				},
-				Resource: []string{
-					"*",
-				},
-				Effect: "Allow",
 			},
-		},
-	}
-	nodePolicy, err := c.CreatePolicy("node-general-"+c.Id, nGP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, nodePolicy)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
-	if err != nil {
-		return
-	}
+		}
+		nodePolicy, err := c.CreatePolicy("node-general-"+c.Id, nGP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("nodeGeneralPolicy", []string{nodePolicy}, true)
+	})
+	run.AddNode("nodeGeneralPolicy", nodeGeneralPolicy)
 
-	masterProfile, err := c.instanceProfile("master-"+c.Id)
-	if err != nil {
-		return
-	}
-	nodeProfile, err := c.instanceProfile("node-"+c.Id)
-	if err != nil {
-		return
-	}
-	err = c.addRoleInstance("master-"+c.Id, "master-"+c.Id)
-	if err != nil {
-		return
-	}
-	err = c.addRoleInstance("node-"+c.Id, "node-"+c.Id)
-	if err != nil {
-		return
-	}
+	attachNodePolicy := rund.NewFuncOperator(func() error {
+		nodePolicy, _ := c.getState("nodeGeneralPolicy", false)
+		err = c.AttachPolicy("node-"+c.Id, nodePolicy[0])
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachNodePolicy", attachNodePolicy)
+	run.AddEdge("nodeGeneralPolicy", "attachNodePolicy")
+	run.AddEdge("nodeRole", "attachNodePolicy")
 
+	attachMasterCNIPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachMasterCNIPolicy", attachMasterCNIPolicy)
+	run.AddEdge("masterRole", "attachMasterCNIPolicy")
+	attachMasterWorkerPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachMasterWorkerPolicy", attachMasterWorkerPolicy)
+	run.AddEdge("masterRole", "attachMasterWorkerPolicy")
+	attachMasterVPCPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("master-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachMasterVPCPolicy", attachMasterVPCPolicy)
+	run.AddEdge("masterRole", "attachMasterVPCPolicy")
+	attachNodeCNIPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachNodeCNIPolicy", attachNodeCNIPolicy)
+	run.AddEdge("nodeRole", "attachNodeCNIPolicy")
+	attachNodeWorkerPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachNodeWorkerPolicy", attachNodeWorkerPolicy)
+	run.AddEdge("nodeRole", "attachNodeWorkerPolicy")
+	attachNodeVPCPolicy := rund.NewFuncOperator(func() error {
+		err = c.AttachPolicy("node-"+c.Id, "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachNodeVPCPolicy", attachNodeVPCPolicy)
+	run.AddEdge("nodeRole", "attachNodeVPCPolicy")
 
-	ami, _, _, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
-	if err != nil {
-		return
-	}
-	log.Info("creating launch templates")
-	_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami, masterProfile, bastionKey, masterSg, `#!/bin/sh
+	masterInstanceProfile := rund.NewFuncOperator(func() error {
+		masterProfile, err := c.instanceProfile("master-"+c.Id)
+		if err != nil {
+			return err
+		}
+		_ = c.saveState("masterProfile", []string{masterProfile}, false)
+		return nil
+	})
+	run.AddNode("masterInstanceProfile", masterInstanceProfile)
+	run.AddEdge("masterRole", "masterInstanceProfile")
+	nodeInstanceProfile := rund.NewFuncOperator(func() error {
+		nodeProfile, err := c.instanceProfile("node-"+c.Id)
+		if err != nil {
+			return err
+		}
+		_ = c.saveState("nodeProfile", []string{nodeProfile}, false)
+		return nil
+	})
+	run.AddNode("nodeInstanceProfile", nodeInstanceProfile)
+	run.AddEdge("nodeRole", "nodeInstanceProfile")
+	masterRoleInstanceProfile := rund.NewFuncOperator(func() error {
+		err = c.addRoleInstance("master-"+c.Id, "master-"+c.Id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("masterRoleInstanceProfile", masterRoleInstanceProfile)
+	run.AddEdge("masterInstanceProfile", "masterRoleInstanceProfile")
+	nodeRoleInstanceProfile := rund.NewFuncOperator(func() error {
+		err = c.addRoleInstance("node-"+c.Id, "node-"+c.Id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("nodeRoleInstanceProfile", nodeRoleInstanceProfile)
+	run.AddEdge("nodeInstanceProfile", "nodeRoleInstanceProfile")
+
+	amiFn := rund.NewFuncOperator(func() error {
+		ami, _, _, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
+		if err != nil {
+			return err
+		}
+		_ = c.saveState("ami", []string{ami}, false)
+		return nil
+	})
+	run.AddNode("ami", amiFn)
+
+	masterTemplateFn := rund.NewFuncOperator(func() error {
+		log.Info("creating master launch template")
+		ami, _ := c.getState("ami", false)
+		bastionKey, _ := c.getState("bastionKey", false)
+		masterSg, _ := c.getState("masterSg", false)
+		masterProfile, _ := c.getState("masterProfile", false)
+		_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami[0], masterProfile[0], bastionKey[0], masterSg[0], `#!/bin/sh
 sudo hyperctl boot`)
-	if err != nil {
-		return
-	}
-	_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami, nodeProfile, bastionKey, nodeSg, `#!/bin/sh
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("masterTemplate", masterTemplateFn)
+	run.AddEdge("ami", "masterTemplate")
+	run.AddEdge("ssh-key", "masterTemplate")
+	run.AddEdge("masterSg", "masterTemplate")
+	run.AddEdge("masterRoleInstanceProfile", "masterTemplate")
+
+	nodeTemplateFn := rund.NewFuncOperator(func() error {
+		log.Info("creating node launch template")
+		ami, _ := c.getState("ami", false)
+		bastionKey, _ := c.getState("bastionKey", false)
+		nodeSg, _ := c.getState("nodeSg", false)
+		nodeProfile, _ := c.getState("nodeProfile", false)
+		_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami[0], nodeProfile[0], bastionKey[0], nodeSg[0], `#!/bin/sh
 sudo hyperctl boot`)
-	if err != nil {
-		return
-	}
-
-	log.Info("creating master load balancer")
-	c.master.Endpoint, err = c.loadBalancer("master-lb-"+c.Id, masterLbSg, []string{masterA, masterB, masterC})
-	if err != nil {
-		return
-	}
-	log.Info("creating IRSA OIDC s3 bucket")
-	irsaBucket, err := c.bucket(c.Id+"-irsa")
-	c.master.Bucket = irsaBucket
-	if err != nil {
-		return
-	}
-	_, err = c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
-	if err != nil {
-		return
-	}
-	irsaPolicy, err := c.IRSAPolicy(irsaBucket)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, irsaPolicy)
-	if err != nil {
-		return
-	}
-	var kmsKey string
-	kmsKey, c.master.KeyARN, err = c.kms(c.Id)
-	if err != nil {
-		return
-	}
-	ebsEncP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"kms:Encrypt",
-					"kms:Decrypt",
-					"kms:ReEncrypt",
-					"kms:GenerateDataKey*",
-					"kms:DescribeKey",
-				},
-				Resource: []string{
-					c.master.KeyARN,
-				},
-				Effect: "Allow",
-			},
-			{
-				Action: []string{
-					"kms:CreateGrant",
-				},
-				Resource: []string{
-					c.master.KeyARN,
-				},
-				Effect: "Allow",
-			},
-		},
-	}
-	ebsEncryptPolicy, err := c.CreatePolicy("ebs-encrypt-"+c.Id, ebsEncP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, ebsEncryptPolicy)
-	if err != nil {
-		return
-	}
-	secretId, err := c.secret(c.Id, kmsKey, "{}")
-	if err != nil {
-		return
-	}
-	secretAdminId, err := c.secret(c.Id+"-admin", kmsKey, "{}")
-	if err != nil {
-		return
-	}
-	c.master.TokenLocation = secretId
-	secretReadP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"secretsmanager:GetSecretValue",
-					"secretsmanager:DescribeSecret",
-					"secretsmanager:ListSecretVersionIds",
-				},
-				Resource: []string{
-					secretId,
-				},
-				Effect: "Allow",
-			},
-			{
-				Action: []string{
-					"kms:Decrypt",
-				},
-				Resource: []string{
-					c.master.KeyARN,
-				},
-				Effect: "Allow",
-			},
-		},
-	}
-	secretReadPolicy, err := c.CreatePolicy("secret-read-"+c.Id, secretReadP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, secretReadPolicy)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, secretReadPolicy)
-	if err != nil {
-		return
-	}
-	secretWriteP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"secretsmanager:PutSecretValue",
-					"secretsmanager:UpdateSecret",
-				},
-				Resource: []string{
-					secretId,
-					secretAdminId,
-				},
-				Effect: "Allow",
-			},
-		},
-	}
-	secretWritePolicy, err := c.CreatePolicy("secret-write-"+c.Id, secretWriteP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, secretWritePolicy)
-	if err != nil {
-		return
-	}
-	table, err := c.createTable(c.Id)
-	if err != nil {
-		return
-	}
-	tableReadP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"dynamodb:GetItem",
-					"dynamodb:DescribeTable",
-					"dynamodb:DescribeTimeToLive",
-					"dynamodb:Query",
-					"dynamodb:Scan",
-				},
-				Resource: []string{
-					table,
-					table+"/index/*",
-				},
-				Effect: "Allow",
-			},
-		},
-	}
-	tableReadPolicy, err := c.CreatePolicy("dynamo-read-"+c.Id, tableReadP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("node-"+c.Id, tableReadPolicy)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, tableReadPolicy)
-	if err != nil {
-		return
-	}
-	tableWriteP := policy{
-		Statement: []statement{
-			{
-				Action: []string{
-					"dynamodb:PutItem",
-					"dynamodb:UpdateItem",
-					"dynamodb:DeleteItem",
-				},
-				Resource: []string{
-					table,
-					table+"/index/*",
-				},
-				Effect: "Allow",
-			},
-		},
-	}
-	tableWritePolicy, err := c.CreatePolicy("dynamo-write-"+c.Id, tableWriteP)
-	if err != nil {
-		return
-	}
-	err = c.AttachPolicy("master-"+c.Id, tableWritePolicy)
-	if err != nil {
-		return
-	}
-	c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
-	err = c.uploadClusterMeta(c.master, true)
-	if err != nil {
-		return
-	}
-
-	err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
-		"Name": "Master - "+c.Id+" - A",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/master": "1",
+		if err != nil {
+			return err
+		}
+		return nil
 	})
-	if err != nil {
-		return
-	}
-	err = c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
-		"Name": "Master - "+c.Id+" - B",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/master": "1",
-	})
-	if err != nil {
-		return
-	}
-	err = c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC, "master-lb-"+c.Id, 1, 1, 1, map[string]string{
-		"Name": "Master - "+c.Id+" - C",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/master": "1",
-	})
-	if err != nil {
-		return
-	}
+	run.AddNode("nodeTemplate", nodeTemplateFn)
+	run.AddEdge("ami", "nodeTemplate")
+	run.AddEdge("ssh-key", "nodeTemplate")
+	run.AddEdge("nodeSg", "nodeTemplate")
+	run.AddEdge("nodeRoleInstanceProfile", "nodeTemplate")
 
-	if err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA, "", 1, 1, 1, map[string]string{
-		"Name": "Node - "+c.Id+" - A",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/node": "1",
-	}); err != nil {
+	createLBFn := rund.NewFuncOperator(func() error {
+		masterA, _ := c.getState("masterA", false)
+		masterB, _ := c.getState("masterA", false)
+		masterC, _ := c.getState("masterA", false)
+		masterLbSg, _ := c.getState("masterLBSg", false)
+		log.Info("creating master load balancer")
+		c.master.Endpoint, err = c.loadBalancer("master-lb-"+c.Id, masterLbSg[0], []string{masterA[0], masterB[1], masterC[2]})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createLB", createLBFn)
+	run.AddEdge("masterLBSg", "createLB")
+	run.AddEdge("masterASubnet", "createLB")
+	run.AddEdge("masterBSubnet", "createLB")
+	run.AddEdge("masterCSubnet", "createLB")
+
+	irsaBucketFn := rund.NewFuncOperator(func() error {
+		log.Info("creating IRSA OIDC s3 bucket")
+		irsaBucket, err := c.bucket(c.Id+"-irsa")
+		if err != nil {
+			return err
+		}
+		c.master.Bucket = irsaBucket
+		return c.saveState("irsaBucket", []string{irsaBucket}, true)
+	})
+	run.AddNode("irsaBucket", irsaBucketFn)
+
+	oidcIAMFn := rund.NewFuncOperator(func() error {
+		_, err = c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
+		return err
+	})
+	run.AddNode("oidcIAM", oidcIAMFn)
+
+	irsaPolicyFn := rund.NewFuncOperator(func() error {
+		irsaBucket, _ := c.getState("irsaBucket", false)
+		irsaPolicy, err := c.IRSAPolicy(irsaBucket[0])
+		if err != nil {
+			return err
+		}
+		return c.saveState("irsaPolicy", []string{irsaPolicy}, true)
+	})
+	run.AddNode("irsaPolicy", irsaPolicyFn)
+	run.AddEdge("irsaBucket", "irsaPolicy")
+	irsaAttachPolicy := rund.NewFuncOperator(func() error {
+		irsaPolicy, _ := c.getState("irsaPolicy", false)
+		return  c.AttachPolicy("master-"+c.Id, irsaPolicy[0])
+	})
+	run.AddNode("irsaAttachPolicy", irsaAttachPolicy)
+	run.AddEdge("irsaPolicy", "irsaAttachPolicy")
+	run.AddEdge("masterRole", "irsaAttachPolicy")
+
+	keyFn := rund.NewFuncOperator(func() error {
+		var kmsKey string
+		kmsKey, c.master.KeyARN, err = c.kms(c.Id)
+		if err != nil {
+			return err
+		}
+		return c.saveState("kms", []string{kmsKey}, true)
+	})
+	run.AddNode("key", keyFn)
+
+	keyPolicy := rund.NewFuncOperator(func() error {
+		ebsEncP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"kms:Encrypt",
+						"kms:Decrypt",
+						"kms:ReEncrypt",
+						"kms:GenerateDataKey*",
+						"kms:DescribeKey",
+					},
+					Resource: []string{
+						c.master.KeyARN,
+					},
+					Effect: "Allow",
+				},
+				{
+					Action: []string{
+						"kms:CreateGrant",
+					},
+					Resource: []string{
+						c.master.KeyARN,
+					},
+					Effect: "Allow",
+				},
+			},
+		}
+		ebsEncryptPolicy, err := c.CreatePolicy("ebs-encrypt-"+c.Id, ebsEncP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("ebsPolicy", []string{ebsEncryptPolicy}, true)
+	})
+	run.AddNode("keyPolicy", keyPolicy)
+	run.AddEdge("key", "keyPolicy")
+
+	attachKeyMaster := rund.NewFuncOperator(func() error {
+		ebsEncryptPolicy, _ := c.getState("ebsPolicy", false)
+		return c.AttachPolicy("master-"+c.Id, ebsEncryptPolicy[0])
+	})
+	run.AddNode("attachKeyMaster", attachKeyMaster)
+	run.AddEdge("keyPolicy", "attachKeyMaster")
+	run.AddEdge("masterRole", "attachKeyMaster")
+
+	nodeSecret := rund.NewFuncOperator(func() error {
+		kmsKey, _ := c.getState("kms", false)
+		secretId, err := c.secret(c.Id, kmsKey[0], "{}")
+		c.master.TokenLocation = secretId
+		if err != nil {
+			return err
+		}
+		return c.saveState("nodeSecret", []string{secretId}, false)
+	})
+	run.AddNode("nodeSecret", nodeSecret)
+	run.AddEdge("key", "nodeSecret")
+
+	adminSecret := rund.NewFuncOperator(func() error {
+		kmsKey, _ := c.getState("kms", false)
+		secretAdminId, err := c.secret(c.Id+"-admin", kmsKey[0], "{}")
+		if err != nil {
+			return err
+		}
+		return c.saveState("adminSecret", []string{secretAdminId}, false)
+	})
+	run.AddNode("adminSecret", adminSecret)
+	run.AddEdge("key", "adminSecret")
+
+	secretReadPolicyFn := rund.NewFuncOperator(func() error {
+		secretId, _ := c.getState("nodeSecret", false)
+		secretReadP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"secretsmanager:GetSecretValue",
+						"secretsmanager:DescribeSecret",
+						"secretsmanager:ListSecretVersionIds",
+					},
+					Resource: []string{
+						secretId[0],
+					},
+					Effect: "Allow",
+				},
+				{
+					Action: []string{
+						"kms:Decrypt",
+					},
+					Resource: []string{
+						c.master.KeyARN,
+					},
+					Effect: "Allow",
+				},
+			},
+		}
+		secretReadPolicy, err := c.CreatePolicy("secret-read-"+c.Id, secretReadP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("secretReadPolicy", []string{secretReadPolicy}, true)
+	})
+	run.AddNode("secretReadPolicy", secretReadPolicyFn)
+	run.AddEdge("nodeSecret", "secretReadPolicy")
+	attachSecretNodePolicyFn := rund.NewFuncOperator(func() error {
+		secretReadPolicy, _ := c.getState("secretReadPolicy", false)
+		return c.AttachPolicy("node-"+c.Id, secretReadPolicy[0])
+	})
+	run.AddNode("attachSecretNodePolicy", attachSecretNodePolicyFn)
+	run.AddEdge("secretReadPolicy", "attachSecretNodePolicy")
+	run.AddEdge("nodeRole", "attachSecretNodePolicy")
+	attachSecretMasterPolicyFn := rund.NewFuncOperator(func() error {
+		secretReadPolicy, _ := c.getState("secretReadPolicy", false)
+		return c.AttachPolicy("master-"+c.Id, secretReadPolicy[0])
+	})
+	run.AddNode("attachSecretMasterPolicy", attachSecretMasterPolicyFn)
+	run.AddEdge("secretReadPolicy", "attachSecretMasterPolicy")
+	run.AddEdge("masterRole", "attachSecretMasterPolicy")
+
+	secretWritePolicyFn := rund.NewFuncOperator(func() error {
+		secretId, _ := c.getState("nodeSecret", false)
+		secretAdminId, _ := c.getState("adminSecret", false)
+		secretWriteP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"secretsmanager:PutSecretValue",
+						"secretsmanager:UpdateSecret",
+					},
+					Resource: []string{
+						secretId[0],
+						secretAdminId[0],
+					},
+					Effect: "Allow",
+				},
+			},
+		}
+		secretWritePolicy, err := c.CreatePolicy("secret-write-"+c.Id, secretWriteP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("secretWritePolicy",[]string{secretWritePolicy}, true)
+	})
+	run.AddNode("secretWritePolicy", secretWritePolicyFn)
+	run.AddEdge("nodeSecret", "secretWritePolicy")
+	run.AddEdge("adminSecret", "secretWritePolicy")
+
+	attachSecretWritePolicyFn := rund.NewFuncOperator(func() error {
+		secretWritePolicy, _ := c.getState("secretWritePolicy", false)
+		return c.AttachPolicy("master-"+c.Id, secretWritePolicy[0])
+	})
+	run.AddNode("attachSecretWritePolicy", attachSecretWritePolicyFn)
+	run.AddEdge("secretWritePolicy", "attachSecretWritePolicy")
+	run.AddEdge("masterRole", "attachSecretWritePolicy")
+
+	createTableFn := rund.NewFuncOperator(func() error {
+		table, err := c.createTable(c.Id)
+		if err != nil {
+			return err
+		}
+		return c.saveState("table", []string{table}, true)
+	})
+	run.AddNode("table", createTableFn)
+
+	tableReadPolicyFn := rund.NewFuncOperator(func() error {
+		table, _ := c.getState("table", false)
+		tableReadP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"dynamodb:GetItem",
+						"dynamodb:DescribeTable",
+						"dynamodb:DescribeTimeToLive",
+						"dynamodb:Query",
+						"dynamodb:Scan",
+					},
+					Resource: []string{
+						table[0],
+						table[0]+"/index/*",
+					},
+					Effect: "Allow",
+				},
+			},
+		}
+		tableReadPolicy, err := c.CreatePolicy("dynamo-read-"+c.Id, tableReadP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("tableReadPolicy", []string{tableReadPolicy}, true)
+	})
+	run.AddNode("tableReadPolicy", tableReadPolicyFn)
+	run.AddEdge("table", "tableReadPolicy")
+
+	attachTableReadMaster := rund.NewFuncOperator(func() error {
+		tableReadPolicy, _ := c.getState("tableReadPolicy", false)
+		if err = c.AttachPolicy("master-"+c.Id, tableReadPolicy[0]); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachTableReadMaster", attachTableReadMaster)
+	run.AddEdge("tableReadPolicy", "attachTableReadMaster")
+	run.AddEdge("masterRole", "attachTableReadMaster")
+	attachTableReadNode := rund.NewFuncOperator(func() error {
+		tableReadPolicy, _ := c.getState("tableReadPolicy", false)
+		if err := c.AttachPolicy("node-"+c.Id, tableReadPolicy[0]); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachTableReadNode", attachTableReadNode)
+	run.AddEdge("tableReadPolicy", "attachTableReadNode")
+	run.AddEdge("nodeRole", "attachTableReadNode")
+
+	tableWritePolicyFn := rund.NewFuncOperator(func() error {
+		table, _ := c.getState("table", false)
+		tableWriteP := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"dynamodb:PutItem",
+						"dynamodb:UpdateItem",
+						"dynamodb:DeleteItem",
+					},
+					Resource: []string{
+						table[0],
+						table[0]+"/index/*",
+					},
+					Effect: "Allow",
+				},
+			},
+		}
+		tableWritePolicy, err := c.CreatePolicy("dynamo-write-"+c.Id, tableWriteP)
+		if err != nil {
+			return err
+		}
+		return c.saveState("tableWritePolicy", []string{tableWritePolicy}, true)
+	})
+	run.AddNode("tableWritePolicy", tableWritePolicyFn)
+	run.AddEdge("table", "tableWritePolicy")
+	run.AddEdge("masterRole", "tableWritePolicy")
+
+	attachTableWriteMaster := rund.NewFuncOperator(func() error {
+		tableWritePolicy, _ := c.getState("tableWritePolicy", false)
+		if err := c.AttachPolicy("master-"+c.Id, tableWritePolicy[0]); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("attachTableWriteMaster", attachTableWriteMaster)
+	run.AddEdge("tableWritePolicy", "attachTableWriteMaster")
+
+	uploadMeta := rund.NewFuncOperator(func() error {
+		c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		return c.uploadClusterMeta(c.master)
+	})
+	run.AddNode("uploadMeta", uploadMeta)
+	run.AddEdge("table", "uploadMeta")
+
+	createMasterAAsg := rund.NewFuncOperator(func() error {
+		masterA, _ := c.getState("masterA", false)
+		err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+			"Name": "Master - "+c.Id+" - A",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/master": "1",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createMasterAAsg", createMasterAAsg)
+	run.AddEdge("createLB", "createMasterAAsg")
+	createMasterBAsg := rund.NewFuncOperator(func() error {
+		masterB, _ := c.getState("masterB", false)
+		if err := c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+			"Name": "Master - "+c.Id+" - B",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/master": "1",
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createMasterBAsg", createMasterBAsg)
+	run.AddEdge("createLB", "createMasterBAsg")
+	createMasterCAsg := rund.NewFuncOperator(func() error {
+		masterC, _ := c.getState("masterC", false)
+		if err := c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+			"Name": "Master - "+c.Id+" - C",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/master": "1",
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createMasterCAsg", createMasterCAsg)
+	run.AddEdge("createLB", "createMasterCAsg")
+
+	createNodeAAsg := rund.NewFuncOperator(func() error {
+		nodeA, _ := c.getState("nodeA", false)
+		if err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 1, 1, 1, map[string]string{
+			"Name": "Node - "+c.Id+" - A",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/node": "1",
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createNodeAAsg", createNodeAAsg)
+	run.AddEdge("nodeASubnet", "createNodeAAsg")
+	run.AddEdge("nodeRole", "createNodeAAsg")
+	createNodeBAsg := rund.NewFuncOperator(func() error {
+		nodeB, _ := c.getState("nodeB", false)
+		if err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 1, 1, 1, map[string]string{
+			"Name": "Node - "+c.Id+" - B",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/node": "1",
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createNodeBAsg", createNodeBAsg)
+	run.AddEdge("nodeBSubnet", "createNodeBAsg")
+	run.AddEdge("nodeRole", "createNodeBAsg")
+	createNodeCAsg := rund.NewFuncOperator(func() error {
+		nodeC, _ := c.getState("nodeC", false)
+		if err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 1, 1, 1, map[string]string{
+			"Name": "Node - "+c.Id+" - C",
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+			"kubernetes.io/role/node": "1",
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("createNodeCAsg", createNodeCAsg)
+	run.AddEdge("nodeCSubnet", "createNodeCAsg")
+	run.AddEdge("nodeRole", "createNodeCAsg")
+	err = run.Run()
+	if err != nil {
+		log.Errorf("failed to deploy on graph traversal: %v", err)
 		return
 	}
-	if err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB, "", 1, 1, 1, map[string]string{
-		"Name": "Node - "+c.Id+" - B",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/node": "1",
-	}); err != nil {
-		return
+}
+
+// save state to the global state struct, and optionally commit remotely
+func (c *Client) saveState(key string, values []string, remote bool) error {
+	c.state[key] = values
+	if remote {
+		go func(){
+		}()
 	}
-	if err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC, "", 1, 1, 1, map[string]string{
-		"Name": "Node - "+c.Id+" - C",
-		"KubernetesCluster": c.Id,
-		strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
-		"kubernetes.io/role/node": "1",
-	}); err != nil {
-		return
-	}
+	return nil
+}
+
+// get state from the global state struct, and optionally fetch remotely
+func (c *Client) getState(key string, remote bool) ([]string, error) {
+	return c.state[key], nil
 }
 
 func (c Client) tag(ids []string, t map[string]string) {
@@ -1431,7 +2115,7 @@ func (c Client) secret(name string, key string, secret string) (string, error) {
 	return *result.ARN, nil
 }
 
-func (c Client) key(name string, s ssh.Ssh) string {
+func (c Client) key(name string, s *ssh.Ssh) string {
 	input := &ec2.ImportKeyPairInput{
 		KeyName: aws.String(name),
 		PublicKeyMaterial: s.PublicKey,
