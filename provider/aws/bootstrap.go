@@ -35,6 +35,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
+	/* state that will need to be destroyed
+	 *
+	 * VPC
+	 * loadbalancer
+	 * autoscaling groups
+	 * firewall nodes
+	 * launch templates
+	 * ssh key
+	 * KMS key
+	 * secret
+	 * dynamo table
+	 * IAM roles
+	 * IAM profiles
+	 * IAM identity provider
+	 */
+
 
 type Direction string
 const (
@@ -153,27 +169,10 @@ func (c Client) CreateCluster() {
 	})
 	run.AddNode("azs", azsFn)
 
-	/* state that will need to be destroyed
-	 *
-	 * VPC
-	 * loadbalancer
-	 * autoscaling groups
-	 * firewall nodes
-	 * launch templates
-	 * ssh key
-	 * KMS key
-	 * secret
-	 * dynamo table
-	 * IAM roles
-	 * IAM profiles
-	 * IAM identity provider
-	 */
-
 	masterASubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
-		azs, _ := c.getState("aZs", false)
-		masterA := c.subnet(vpc, masterACidr.String(), "Master - 0", false, azs[0])
+		vpc, _ := c.getState("vpc", false)
+		azs, _ := c.getState("azs", false)
+		masterA := c.subnet(vpc[0], masterACidr.String(), "Master - 0", false, azs[0])
 		if masterA == "" {
 			return errors.New("failed to create Master A subnet")
 		}
@@ -184,10 +183,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "masterASubnet")
 	run.AddEdge("azs", "masterASubnet")
 	masterBSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
-		azs, _ := c.getState("aZs", false)
-		masterB := c.subnet(vpc, masterBCidr.String(), "Master - 1", false, azs[1])
+		vpc, _ := c.getState("vpc", false)
+		azs, _ := c.getState("azs", false)
+		masterB := c.subnet(vpc[0], masterBCidr.String(), "Master - 1", false, azs[1])
 		if masterB == "" {
 			return errors.New("failed to create Master B subnet")
 		}
@@ -198,10 +196,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "masterBSubnet")
 	run.AddEdge("azs", "masterBSubnet")
 	masterCSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
-		azs, _ := c.getState("aZs", false)
-		masterC := c.subnet(vpc, masterCCidr.String(), "Master - 2", false, azs[2])
+		vpc, _ := c.getState("vpc", false)
+		azs, _ := c.getState("azs", false)
+		masterC := c.subnet(vpc[0], masterCCidr.String(), "Master - 2", false, azs[2])
 		if masterC == "" {
 			return errors.New("failed to create Master C subnet")
 		}
@@ -212,10 +209,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "masterCSubnet")
 	run.AddEdge("azs", "masterCSubnet")
 	nodeASubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		nodeA   := c.subnet(vpc, nodeACidr.String(), "Nodes - 0", false, azs[0])
+		nodeA   := c.subnet(vpc[0], nodeACidr.String(), "Nodes - 0", false, azs[0])
 		if nodeA == "" {
 			return errors.New("failed to create Node A subnet")
 		}
@@ -226,10 +222,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "nodeASubnet")
 	run.AddEdge("azs", "nodeASubnet")
 	nodeBSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		nodeB   := c.subnet(vpc, nodeBCidr.String(), "Nodes - 1", false, azs[1])
+		nodeB   := c.subnet(vpc[0], nodeBCidr.String(), "Nodes - 1", false, azs[1])
 		if nodeB == "" {
 			return errors.New("failed to create Node B subnet")
 		}
@@ -240,10 +235,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "nodeBSubnet")
 	run.AddEdge("azs", "nodeBSubnet")
 	nodeCSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		nodeC   := c.subnet(vpc, nodeCCidr.String(), "Nodes - 2", false, azs[2])
+		nodeC   := c.subnet(vpc[0], nodeCCidr.String(), "Nodes - 2", false, azs[2])
 		if nodeC == "" {
 			return errors.New("failed to create Node C subnet")
 		}
@@ -254,10 +248,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "nodeCSubnet")
 	run.AddEdge("azs", "nodeCSubnet")
 	edgeASubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		edgeA   := c.subnet(vpc, edgeACidr.String(), "Edge - 0", true, azs[0])
+		edgeA   := c.subnet(vpc[0], edgeACidr.String(), "Edge - 0", true, azs[0])
 		if edgeA == "" {
 			return errors.New("failed to create Edge A subnet")
 		}
@@ -268,10 +261,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "edgeASubnet")
 	run.AddEdge("azs", "edgeASubnet")
 	edgeBSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		edgeB   := c.subnet(vpc, edgeBCidr.String(), "Edge - 1", true, azs[1])
+		edgeB   := c.subnet(vpc[0], edgeBCidr.String(), "Edge - 1", true, azs[1])
 		if edgeB == "" {
 			return errors.New("failed to create Edge B subnet")
 		}
@@ -282,10 +274,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("vpc", "edgeBSubnet")
 	run.AddEdge("azs", "edgeBSubnet")
 	edgeCSubnetFn := rund.NewFuncOperator(func () error {
-		vpcs, _ := c.getState("vpc", false)
-		vpc := vpcs[0]
+		vpc, _ := c.getState("vpc", false)
 		azs, _ := c.getState("azs", false)
-		edgeC   := c.subnet(vpc, edgeCCidr.String(), "Edge - 2", true, azs[2])
+		edgeC   := c.subnet(vpc[0], edgeCCidr.String(), "Edge - 2", true, azs[2])
 		if edgeC == "" {
 			return errors.New("failed to create Edge C subnet")
 		}
@@ -328,7 +319,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("assocRouteEdgeA", assocRouteEdgeA)
-	run.AddEdge("edgeA", "assocRouteEdgeA")
+	run.AddEdge("edgeASubnet", "assocRouteEdgeA")
 	run.AddEdge("createRoute", "assocRouteEdgeA")
 	assocRouteEdgeB := rund.NewFuncOperator(func() error {
 		edgeB, _ := c.getState("edgeB", false)
@@ -337,7 +328,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("assocRouteEdgeB", assocRouteEdgeB)
-	run.AddEdge("edgeB", "assocRouteEdgeB")
+	run.AddEdge("edgeBSubnet", "assocRouteEdgeB")
 	run.AddEdge("createRoute", "assocRouteEdgeB")
 	assocRouteEdgeC:= rund.NewFuncOperator(func() error {
 		edgeC, _ := c.getState("edgeC", false)
@@ -346,7 +337,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("assocRouteEdgeC", assocRouteEdgeC)
-	run.AddEdge("edgeC", "assocRouteEdgeC")
+	run.AddEdge("edgeCSubnet", "assocRouteEdgeC")
 	run.AddEdge("createRoute", "assocRouteEdgeC")
 
 	edgeSgFn := rund.NewFuncOperator(func() error {
@@ -415,13 +406,6 @@ func (c Client) CreateCluster() {
 	run.AddEdge("masterSg", "edgeSgRules")
 	run.AddEdge("edgeSg", "edgeSgRules")
 
-	/*
-	c.securityGroupRuleApply(edgeSg, []ec2.IpPermission{edgeEgress}, Egress)
-	c.securityGroupRuleApply(masterSg, []ec2.IpPermission{edgeEgress}, Egress)
-	c.securityGroupRuleApply(masterLbSg, []ec2.IpPermission{edgeEgress}, Egress)
-	c.securityGroupRuleApply(nodeSg, []ec2.IpPermission{edgeEgress}, Egress)
-	*/
-
 	masterSgRulesFn := rund.NewFuncOperator(func() error {
 		edgeSg, _ := c.getState("edgeSg", false)
 		masterSg, _ := c.getState("masterSg", false)
@@ -480,9 +464,9 @@ func (c Client) CreateCluster() {
 	run.AddEdge("masterSg", "nodeSgRules")
 	run.AddEdge("edgeSg", "nodeSgRules")
 
-	/* @TODO fix hardcoded AMI
-	 * Move to Edge Nodes with Cilium XDP Load Balancing
-	 */
+	// @TODO fix hardcoded AMI
+	// Move to Edge Nodes with Cilium XDP Load Balancing
+
 	fwAFn := rund.NewFuncOperator(func() error {
 		bastionKey, _ := c.getState("bastionKey", false)
 		edgeA, _      := c.getState("edgeA", false)
@@ -502,7 +486,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("fwA", fwAFn)
-	run.AddEdge("edgeA", "fwA")
+	run.AddEdge("edgeASubnet", "fwA")
 	run.AddEdge("ssh-keys", "fwA")
 	run.AddEdge("edgeSg", "fwA")
 
@@ -622,8 +606,7 @@ func (c Client) CreateCluster() {
 		},
 	}
 	masterRole := rund.NewFuncOperator(func() error {
-		_, err = c.CreateRole("master-"+c.Id, r)
-		if err != nil {
+		if _, err := c.CreateRole("master-"+c.Id, r); err != nil {
 			return err
 		}
 		return nil
@@ -637,6 +620,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("nodeRole", nodeRole)
+
 	masterGeneralPolicy := rund.NewFuncOperator(func() error {
 		mGP := policy{
 			Statement: []statement{
@@ -846,7 +830,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("nodeRoleInstanceProfile", nodeRoleInstanceProfile)
-	run.AddEdge("nodeInstanceProfile", "nodeRoleInstanceProfile")
+	run.AddEdge("masterRole", "nodeRoleInstanceProfile")
 
 	amiFn := rund.NewFuncOperator(func() error {
 		ami, _, _, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
@@ -873,7 +857,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("masterTemplate", masterTemplateFn)
 	run.AddEdge("ami", "masterTemplate")
-	run.AddEdge("ssh-key", "masterTemplate")
+	run.AddEdge("ssh-keys", "masterTemplate")
 	run.AddEdge("masterSg", "masterTemplate")
 	run.AddEdge("masterRoleInstanceProfile", "masterTemplate")
 
@@ -892,17 +876,17 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("nodeTemplate", nodeTemplateFn)
 	run.AddEdge("ami", "nodeTemplate")
-	run.AddEdge("ssh-key", "nodeTemplate")
+	run.AddEdge("ssh-keys", "nodeTemplate")
 	run.AddEdge("nodeSg", "nodeTemplate")
 	run.AddEdge("nodeRoleInstanceProfile", "nodeTemplate")
 
 	createLBFn := rund.NewFuncOperator(func() error {
 		masterA, _ := c.getState("masterA", false)
-		masterB, _ := c.getState("masterA", false)
-		masterC, _ := c.getState("masterA", false)
+		masterB, _ := c.getState("masterB", false)
+		masterC, _ := c.getState("masterC", false)
 		masterLbSg, _ := c.getState("masterLBSg", false)
 		log.Info("creating master load balancer")
-		c.master.Endpoint, err = c.loadBalancer("master-lb-"+c.Id, masterLbSg[0], []string{masterA[0], masterB[1], masterC[2]})
+		c.master.Endpoint, err = c.loadBalancer("master-lb-"+c.Id, masterLbSg[0], []string{masterA[0], masterB[0], masterC[0]})
 		if err != nil {
 			return err
 		}
@@ -1230,6 +1214,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createMasterAAsg", createMasterAAsg)
 	run.AddEdge("createLB", "createMasterAAsg")
+	run.AddEdge("masterTemplate", "createMasterAAsg")
 	createMasterBAsg := rund.NewFuncOperator(func() error {
 		masterB, _ := c.getState("masterB", false)
 		if err := c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
@@ -1244,6 +1229,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createMasterBAsg", createMasterBAsg)
 	run.AddEdge("createLB", "createMasterBAsg")
+	run.AddEdge("masterTemplate", "createMasterBAsg")
 	createMasterCAsg := rund.NewFuncOperator(func() error {
 		masterC, _ := c.getState("masterC", false)
 		if err := c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
@@ -1258,6 +1244,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createMasterCAsg", createMasterCAsg)
 	run.AddEdge("createLB", "createMasterCAsg")
+	run.AddEdge("masterTemplate", "createMasterCAsg")
 
 	createNodeAAsg := rund.NewFuncOperator(func() error {
 		nodeA, _ := c.getState("nodeA", false)
@@ -1273,7 +1260,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createNodeAAsg", createNodeAAsg)
 	run.AddEdge("nodeASubnet", "createNodeAAsg")
-	run.AddEdge("nodeRole", "createNodeAAsg")
+	run.AddEdge("nodeTemplate", "createNodeAAsg")
 	createNodeBAsg := rund.NewFuncOperator(func() error {
 		nodeB, _ := c.getState("nodeB", false)
 		if err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 1, 1, 1, map[string]string{
@@ -1288,7 +1275,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createNodeBAsg", createNodeBAsg)
 	run.AddEdge("nodeBSubnet", "createNodeBAsg")
-	run.AddEdge("nodeRole", "createNodeBAsg")
+	run.AddEdge("nodeTemplate", "createNodeBAsg")
 	createNodeCAsg := rund.NewFuncOperator(func() error {
 		nodeC, _ := c.getState("nodeC", false)
 		if err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 1, 1, 1, map[string]string{
@@ -1303,7 +1290,8 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("createNodeCAsg", createNodeCAsg)
 	run.AddEdge("nodeCSubnet", "createNodeCAsg")
-	run.AddEdge("nodeRole", "createNodeCAsg")
+	run.AddEdge("nodeTemplate", "createNodeCAsg")
+
 	err = run.Run()
 	if err != nil {
 		log.Errorf("failed to deploy on graph traversal: %v", err)
