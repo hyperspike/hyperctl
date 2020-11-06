@@ -28,15 +28,15 @@ func (d *Deployer) IRSA() error {
 	if err := d.ciliumServiceAccount("pod-identity-webhook") ; err != nil {
 		return err
 	}
-	if err := d.r.Create(context.TODO(), irsaClusterRole()); err != nil {
+	if err := d.r.Create(context.Background(), irsaClusterRole()); err != nil {
 		log.Errorf("failed to create irsa cluster role, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), irsaClusterRoleBinding()); err != nil {
+	if err := d.r.Create(context.Background(), irsaClusterRoleBinding()); err != nil {
 		log.Errorf("failed to create irsa cluster role binding, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), irsaService()); err != nil {
+	if err := d.r.Create(context.Background(), irsaService()); err != nil {
 		log.Errorf("failed to create irsa service, %v", err)
 		return err
 	}
@@ -44,7 +44,7 @@ func (d *Deployer) IRSA() error {
 	if err != nil {
 		return err
 	}
-	if err := d.r.Create(context.TODO(), createIRSATlsSecret(cert, key)); err != nil {
+	if err := d.r.Create(context.Background(), createIRSATlsSecret(cert, key)); err != nil {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
 	}
@@ -53,12 +53,12 @@ func (d *Deployer) IRSA() error {
 		return err
 	}
 	ca = []byte(strings.ReplaceAll(string(ca), "\n", ""))
-	if err := d.r.Create(context.TODO(), irsaDeployment()); err != nil {
+	if err := d.r.Create(context.Background(), irsaDeployment()); err != nil {
 		log.Errorf("failed to create irsa deployment, %v", err)
 		return err
 	}
 
-	if err := d.r.Create(context.TODO(), irsaWebhook(ca)); err != nil {
+	if err := d.r.Create(context.Background(), irsaWebhook(ca)); err != nil {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
 	}
@@ -91,7 +91,7 @@ func createTlsSecret(cert, key []byte, name, namespace string) *corev1.Secret { 
 
 func (d *Deployer) getTlsCert() ([]byte, error) { // {{{
 	secret := &corev1.Secret{}
-	err := d.r.Get(context.TODO(), types.NamespacedName{Name: "pod-identity-webhook", Namespace: "kube-system"}, secret)
+	err := d.r.Get(context.Background(), types.NamespacedName{Name: "pod-identity-webhook", Namespace: "kube-system"}, secret)
 	if err != nil {
 		log.Errorf("failed to get irsa secret, %v", err)
 		return []byte(""), err

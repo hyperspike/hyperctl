@@ -21,11 +21,11 @@ func (d *Deployer) EtcdCerts() error {
 		return errors.WithMessagef(err, "error reading cert file %s", keyFile)
 	}
 
-	if err := d.r.Create(context.TODO(), namespace("monitoring")); err != nil {
+	if err := d.r.Create(context.Background(), namespace("monitoring")); err != nil {
 		log.Errorf("failed to monitoring namesapce, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), createTlsSecret(cert, key, "etcd-client", "monitoring")); err != nil {
+	if err := d.r.Create(context.Background(), createTlsSecret(cert, key, "etcd-client", "monitoring")); err != nil {
 		log.Errorf("failed to create etcd secrets, %v", err)
 		return err
 	}

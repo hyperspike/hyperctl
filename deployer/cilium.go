@@ -25,23 +25,23 @@ func (d *Deployer) Cilium() error {
 	if err := d.ciliumServiceAccount("hubble-ui") ; err != nil {
 		return err
 	}
-	if err := d.r.Create(context.TODO(), ciliumClusterRole()) ; err != nil {
+	if err := d.r.Create(context.Background(), ciliumClusterRole()) ; err != nil {
 		log.Errorf("failed to create cilium cluster role, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), ciliumOperatorClusterRole()) ; err != nil {
+	if err := d.r.Create(context.Background(), ciliumOperatorClusterRole()) ; err != nil {
 		log.Errorf("failed to create cilium operator cluster role, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), ciliumClusterRoleBinding()) ; err != nil {
+	if err := d.r.Create(context.Background(), ciliumClusterRoleBinding()) ; err != nil {
 		log.Errorf("failed to create cilium cluster role binding, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), ciliumOperatorClusterRoleBinding()) ; err != nil {
+	if err := d.r.Create(context.Background(), ciliumOperatorClusterRoleBinding()) ; err != nil {
 		log.Errorf("failed to create cilium operator cluster role binding, %v", err)
 		return err
 	}
-	if err := d.r.Create(context.TODO(), ciliumConfigMap(d.pods, d.cluster)) ; err != nil {
+	if err := d.r.Create(context.Background(), ciliumConfigMap(d.pods, d.cluster)) ; err != nil {
 		log.Errorf("failed to create cilium configmap, %v", err)
 		return err
 	}
@@ -142,7 +142,7 @@ func (d *Deployer) ciliumServiceAccount(name string) error { // {{{
 			Namespace: "kube-system",
 		},
 	}
-	err := d.r.Create(context.TODO(), sa)
+	err := d.r.Create(context.Background(), sa)
 	if err != nil {
 		log.Errorf("failed to create %s service account, %v", name, err)
 		return err
@@ -565,7 +565,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 		},
 		
 	}
-	if err := d.r.Create(context.TODO(), ds); err != nil {
+	if err := d.r.Create(context.Background(), ds); err != nil {
 		log.Errorf("failed to create cilium-agent daemonset, %v", err)
 		return err
 	}
@@ -770,7 +770,7 @@ func (d *Deployer) ciliumOperatorDeployment() error { // {{{
 			},
 		},
 	}
-	if err := d.r.Create(context.TODO(), dep); err != nil {
+	if err := d.r.Create(context.Background(), dep); err != nil {
 		log.Errorf("failed to create cilium-operator deployment , %v", err)
 		return err
 	}

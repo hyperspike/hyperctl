@@ -11,17 +11,17 @@ import (
 
 func (d *Deployer) CCM() error {
 	log.Infof("deploying cloud-contoller-manager to %s", d.cluster)
-	err := d.r.Create(context.TODO(), ccmServiceAccount())
+	err := d.r.Create(context.Background(), ccmServiceAccount())
 	if err != nil {
 		log.Errorf("failed to create cloud-controller service account, %v", err)
 		return err
 	}
-	err = d.r.Create(context.TODO(), ccmRoleBinding())
+	err = d.r.Create(context.Background(), ccmRoleBinding())
 	if err != nil {
 		log.Errorf("failed to create elevated priviledges for cloud-controller service account, %v", err)
 		return err
 	}
-	err = d.r.Create(context.TODO(), ccmDeployment(d.endpoint, d.pods, d.cluster))
+	err = d.r.Create(context.Background(), ccmDeployment(d.endpoint, d.pods, d.cluster))
 	if err != nil {
 		log.Errorf("failed to create cloud-controller DaemonSet, %v", err)
 		return err
