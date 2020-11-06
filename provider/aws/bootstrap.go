@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/andy2046/rund"
 
+	"hyperspike.io/hyperctl"
 	"hyperspike.io/hyperctl/auth/ssh"
 	"hyperspike.io/hyperctl/bootstrap/bastion"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -464,16 +465,28 @@ func (c Client) CreateCluster() {
 	run.AddEdge("masterSg", "nodeSgRules")
 	run.AddEdge("edgeSg", "nodeSgRules")
 
-	// @TODO fix hardcoded AMI
-	// Move to Edge Nodes with Cilium XDP Load Balancing
+	// @TODO Move to Edge Nodes with Cilium XDP Load Balancing
+	amiFwFn := rund.NewFuncOperator(func() error {
+		ami, _, _, err := c.SearchAMI("538276064493", map[string]string{
+			"name":"alpine-ami-"+hyperctl.AlpineVersion+"*",
+			"architecture":"x86_64",
+		})
+		if err != nil {
+			return err
+		}
+		_ = c.saveState("amiFw", []string{ami}, false)
+		return nil
+	})
+	run.AddNode("amiFw", amiFwFn)
 
 	fwAFn := rund.NewFuncOperator(func() error {
 		bastionKey, _ := c.getState("bastionKey", false)
 		edgeA, _      := c.getState("edgeA", false)
 		edgeSg, _     := c.getState("edgeSg", false)
+		ami, _        := c.getState("amiFw", false)
 		fwA, err := c.instance(&Instance{
 			name: "Firewall - 1",
-			ami: "ami-008a61f78ba92b950",
+			ami: ami[0],
 			key: bastionKey[0],
 			subnet: edgeA[0],
 			sg: edgeSg[0],
@@ -489,6 +502,7 @@ func (c Client) CreateCluster() {
 	run.AddEdge("edgeASubnet", "fwA")
 	run.AddEdge("ssh-keys", "fwA")
 	run.AddEdge("edgeSg", "fwA")
+	run.AddEdge("amiFw", "fwA")
 
 	natRouteFn := rund.NewFuncOperator(func() error {
 		vpc, _ := c.getState("vpc", false)

@@ -73,7 +73,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 * [ ] More Cilium configs, hubble, psp, serviceMonitors
 * [x] Refactor to add concurrency, use directed acyclic graph for dependency mapping?
-* [ ] fix alpine ami image
+* [x] fix alpine ami image
 * [ ] Support Additional User-Set Tags
 * [ ] Track state for destruction
 * [ ] Track global state
