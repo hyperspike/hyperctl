@@ -1110,7 +1110,7 @@ sudo hyperctl boot`)
 	run.AddEdge("masterRole", "attachSecretWritePolicy")
 
 	createTableFn := rund.NewFuncOperator(func() error {
-		table, err := c.createTable(c.Id)
+		table, err := c.createLocalTable(c.Id)
 		if err != nil {
 			return err
 		}
@@ -1316,10 +1316,6 @@ sudo hyperctl boot`)
 // save state to the global state struct, and optionally commit remotely
 func (c *Client) saveState(key string, values []string, remote bool) error {
 	c.state[key] = values
-	if remote {
-		go func(){
-		}()
-	}
 	return nil
 }
 
@@ -1327,6 +1323,17 @@ func (c *Client) saveState(key string, values []string, remote bool) error {
 func (c *Client) getState(key string, remote bool) ([]string, error) {
 	return c.state[key], nil
 }
+
+/*
+func (c *Client) globalDB(regions []string) (string, error) {
+	globalTable, err := c.createTable("hyperspike", true, regions)
+	if err != nil {
+		return "", err
+	}
+
+	return globalTable, nil
+}
+*/
 
 func (c Client) tag(ids []string, t map[string]string) {
 	tags := []ec2.Tag{}
@@ -2444,7 +2451,11 @@ func (c Client) uploadString(bucket, path, body string) error {
 	return nil
 }
 
-func (c Client) createTable(name string) (string, error) {
+func (c Client) createLocalTable(name string) (string, error) {
+	return c.createTable(name, false, []string{})
+}
+
+func (c Client) createTable(name string, global bool, regions []string) (string, error) {
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []dynamodb.AttributeDefinition{
@@ -2472,6 +2483,12 @@ func (c Client) createTable(name string) (string, error) {
 			Enabled: aws.Bool(true),
 		},
 		TableName: aws.String(name),
+	}
+	if global {
+		input.StreamSpecification = &dynamodb.StreamSpecification{
+			StreamEnabled: aws.Bool(true),
+			StreamViewType: dynamodb.StreamViewTypeNewAndOldImages,
+		}
 	}
 
 	req := svc.CreateTableRequest(input)
@@ -2541,6 +2558,23 @@ func (c Client) createTable(name string) (string, error) {
 	if err != nil {
 		log.Println(err.Error())
 		return "", err
+	}
+	if global {
+		replicate := &dynamodb.UpdateTableInput{}
+		for _, region := range regions {
+			if region != c.Region {
+				replicate.ReplicaUpdates = append(replicate.ReplicaUpdates, dynamodb.ReplicationGroupUpdate{
+					Create: &dynamodb.CreateReplicationGroupMemberAction{
+						RegionName: aws.String(region),
+					},
+				})
+			}
+		}
+		reqRep := svc.UpdateTableRequest(replicate)
+		if _, err = reqRep.Send(context.Background()); err != nil {
+			log.Errorf("failed to replicate global table, %v", err)
+			return "", err
+		}
 	}
 	// log.Println(res)
 	return *result.TableDescription.TableArn, nil
