@@ -6,6 +6,7 @@ import (
 	// #nosec
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 
 	"bytes"
 	"context"
@@ -107,6 +108,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("vpc", vpcFn)
+	run.AddEdge("table", "vpc")
 
 	podCidr, err := cidr.Subnet(vpcCidr, 4, 8)
 	if err != nil {
@@ -626,6 +628,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("masterRole", masterRole)
+	run.AddEdge("table", "masterRole")
 	nodeRole := rund.NewFuncOperator(func() error {
 		_, err = c.CreateRole("node-"+c.Id, r)
 		if err != nil {
@@ -634,6 +637,7 @@ func (c Client) CreateCluster() {
 		return nil
 	})
 	run.AddNode("nodeRole", nodeRole)
+	run.AddEdge("table", "nodeRole")
 
 	masterGeneralPolicy := rund.NewFuncOperator(func() error {
 		mGP := policy{
@@ -704,6 +708,7 @@ func (c Client) CreateCluster() {
 		return c.saveState("masterGeneralPolicy", []string{masterPolicy}, true)
 	})
 	run.AddNode("masterGeneralPolicy", masterGeneralPolicy)
+	run.AddEdge("table", "masterGeneralPolicy")
 
 	attachMasterPolicy := rund.NewFuncOperator(func() error {
 		masterPolicy, _ := c.getState("masterGeneralPolicy", false)
@@ -739,6 +744,7 @@ func (c Client) CreateCluster() {
 		return c.saveState("nodeGeneralPolicy", []string{nodePolicy}, true)
 	})
 	run.AddNode("nodeGeneralPolicy", nodeGeneralPolicy)
+	run.AddEdge("table", "nodeGeneralPolicy")
 
 	attachNodePolicy := rund.NewFuncOperator(func() error {
 		nodePolicy, _ := c.getState("nodeGeneralPolicy", false)
@@ -922,12 +928,14 @@ sudo hyperctl boot`)
 		return c.saveState("irsaBucket", []string{irsaBucket}, true)
 	})
 	run.AddNode("irsaBucket", irsaBucketFn)
+	run.AddEdge("table", "irsaBucket")
 
 	oidcIAMFn := rund.NewFuncOperator(func() error {
 		_, err = c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
 		return err
 	})
 	run.AddNode("oidcIAM", oidcIAMFn)
+	run.AddEdge("table", "oidcIAM")
 
 	irsaPolicyFn := rund.NewFuncOperator(func() error {
 		irsaBucket, _ := c.getState("irsaBucket", false)
@@ -956,6 +964,7 @@ sudo hyperctl boot`)
 		return c.saveState("kms", []string{kmsKey}, true)
 	})
 	run.AddNode("key", keyFn)
+	run.AddEdge("table", "key")
 
 	keyPolicy := rund.NewFuncOperator(func() error {
 		ebsEncP := policy{
@@ -1117,6 +1126,15 @@ sudo hyperctl boot`)
 		return c.saveState("table", []string{table}, true)
 	})
 	run.AddNode("table", createTableFn)
+
+	createGlobalTable := rund.NewFuncOperator(func() error {
+		if err := c.isTable("hyperspike") ; err != nil {
+			_, err := c.globalDB([]string{c.Region, "us-east-2", "us-west-2"})
+			return err
+		}
+		return nil
+	})
+	run.AddNode("globalTable", createGlobalTable)
 
 	tableReadPolicyFn := rund.NewFuncOperator(func() error {
 		table, _ := c.getState("table", false)
@@ -1316,16 +1334,87 @@ sudo hyperctl boot`)
 // save state to the global state struct, and optionally commit remotely
 func (c *Client) saveState(key string, values []string, remote bool) error {
 	c.state[key] = values
+	if remote {
+		if c.agentStore == nil {
+			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		}
+		b, err := json.Marshal(values)
+		if err != nil {
+			log.Errorf("state key: %s, failed to encode value to json, %v", key, err)
+			return err
+		}
+		err = c.agentStore.Put(context.Background(), "state-"+key, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(b))}), dynalock.WriteWithNoExpires())
+		log.Errorf("failed to save remote state %s, %v", key, err)
+		return err
+	}
 	return nil
 }
 
 // get state from the global state struct, and optionally fetch remotely
 func (c *Client) getState(key string, remote bool) ([]string, error) {
+	if remote {
+		if c.agentStore == nil {
+			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		}
+		ret, err := c.agentStore.Get(context.Background(), "state-"+key)
+		if err != nil {
+			log.Errorf("failed to get remote state %s, %v", key, err)
+			return []string{}, err
+		}
+		v := []string{}
+		err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), &v)
+		if err != nil {
+			log.Errorf("state key: %s, failed to decode json to string, %v", key, err)
+			return []string{}, err
+		}
+		c.state[key] = v
+		return v, nil
+	}
 	return c.state[key], nil
 }
 
-/*
+func (c *Client) isTable(name string) error {
+	svc := dynamodb.New(c.Cfg)
+	reqS := svc.DescribeTableRequest(&dynamodb.DescribeTableInput{
+			TableName: aws.String(name),
+		})
+	count := 0
+	limit := 3
+	for {
+		resS, err := reqS.Send(context.Background())
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case dynamodb.ErrCodeResourceNotFoundException:
+					log.Error(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+					return err
+				case dynamodb.ErrCodeInternalServerError:
+					log.Error(dynamodb.ErrCodeInternalServerError, aerr.Error())
+				default:
+					log.Error(aerr.Error())
+				}
+			} else {
+				log.Error(err.Error())
+			}
+			return err
+		}
+		status := resS.DescribeTableOutput.Table.TableStatus
+		if status == dynamodb.TableStatusActive {
+			log.Debugf("table %s, ready and found", name)
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+		count++
+		if count >= limit {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Client) globalDB(regions []string) (string, error) {
+
 	globalTable, err := c.createTable("hyperspike", true, regions)
 	if err != nil {
 		return "", err
@@ -1333,7 +1422,6 @@ func (c *Client) globalDB(regions []string) (string, error) {
 
 	return globalTable, nil
 }
-*/
 
 func (c Client) tag(ids []string, t map[string]string) {
 	tags := []ec2.Tag{}
@@ -2511,7 +2599,7 @@ func (c Client) createTable(name string, global bool, regions []string) (string,
 		}
 		return "", err
 	}
-	log.Println(result)
+	log.Infof("table %s, created", name)
 	reqS := svc.DescribeTableRequest(&dynamodb.DescribeTableInput{
 			TableName: aws.String(name),
 		})

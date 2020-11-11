@@ -75,7 +75,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [x] Refactor to add concurrency, use directed acyclic graph for dependency mapping?
 * [x] fix alpine ami image
 * [ ] Support Additional User-Set Tags
-* [ ] Track state for destruction
+* [x] Track state for destruction
 * [ ] Track global state
 * [ ] autocomplete on remote state search
 * [ ] cluster destroy
@@ -84,6 +84,9 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [x] Automatically detect availability zones
 * [ ] Split logging into; to file on server and console on workstation
 * [x] upload etcd-healthcheck-client keys
+* [ ] falco
+* [ ] automated e2e
+* [ ] cleanup AMI building
 
 ## Beta
 
