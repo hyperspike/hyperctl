@@ -24,7 +24,7 @@ func (c Client) uploadAdminKeys() error {
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.PutSecretValueInput{
 		SecretId:           aws.String(c.ClusterName()+"-admin"),
-		SecretString:       aws.String("{\"ADMIN_CONF\":\""+base64.RawURLEncoding.EncodeToString(content)+"\""),
+		SecretString:       aws.String("{\"ADMIN_CONF\":\""+base64.RawURLEncoding.EncodeToString(content)+"\"}"),
 	}
 
 	req := svc.PutSecretValueRequest(input)
