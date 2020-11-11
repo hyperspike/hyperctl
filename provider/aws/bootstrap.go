@@ -1225,7 +1225,9 @@ sudo hyperctl boot`)
 	run.AddEdge("tableWritePolicy", "attachTableWriteMaster")
 
 	uploadMeta := rund.NewFuncOperator(func() error {
-		c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		if c.agentStore == nil {
+			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		}
 		return c.uploadClusterMeta(c.master)
 	})
 	run.AddNode("uploadMeta", uploadMeta)
@@ -1327,6 +1329,34 @@ sudo hyperctl boot`)
 	run.AddNode("createNodeCAsg", createNodeCAsg)
 	run.AddEdge("nodeCSubnet", "createNodeCAsg")
 	run.AddEdge("nodeTemplate", "createNodeCAsg")
+
+	waitForInit := rund.NewFuncOperator(func() error {
+		if c.agentStore == nil {
+			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
+		}
+		globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
+		limit := 20
+		count := 0
+		for {
+			m, err := c.controlPlaneMeta()
+			if err != nil {
+				return err
+			}
+			if m.Initialized {
+				return globalStore.Put(context.Background(), c.Id, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String("RUNNING")}), dynalock.WriteWithNoExpires())
+			}
+			time.Sleep(5 * time.Second)
+			if count >= limit {
+				return errors.New("Failed to initialize cluster within timelimit, giving up")
+			}
+			count++
+		}
+		return nil
+	})
+	run.AddNode("waitForInit", waitForInit)
+	run.AddEdge("createMasterAAsg", "waitForInit")
+	run.AddEdge("createMasterBAsg", "waitForInit")
+	run.AddEdge("createMasterCAsg", "waitForInit")
 
 	err = run.Run()
 	if err != nil {

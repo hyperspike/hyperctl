@@ -76,7 +76,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [x] fix alpine ami image
 * [ ] Support Additional User-Set Tags
 * [x] Track state for destruction
-* [ ] Track global state
+* [x] Track global state
 * [ ] autocomplete on remote state search
 * [ ] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
