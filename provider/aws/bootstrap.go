@@ -1335,7 +1335,7 @@ sudo hyperctl boot`)
 			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
 		}
 		globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
-		limit := 20
+		limit := 60 // 5 minutes
 		count := 0
 		for {
 			m, err := c.controlPlaneMeta()
