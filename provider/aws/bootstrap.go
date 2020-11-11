@@ -1230,6 +1230,10 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("uploadMeta", uploadMeta)
 	run.AddEdge("table", "uploadMeta")
+	run.AddEdge("createLB", "uploadMeta")
+	run.AddEdge("irsaBucket", "uploadMeta")
+	run.AddEdge("key", "uploadMeta")
+	run.AddEdge("nodeSecret", "uploadMeta")
 
 	createMasterAAsg := rund.NewFuncOperator(func() error {
 		masterA, _ := c.getState("masterA", false)
@@ -1343,9 +1347,7 @@ func (c *Client) saveState(key string, values []string, remote bool) error {
 			log.Errorf("state key: %s, failed to encode value to json, %v", key, err)
 			return err
 		}
-		err = c.agentStore.Put(context.Background(), "state-"+key, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(b))}), dynalock.WriteWithNoExpires())
-		log.Errorf("failed to save remote state %s, %v", key, err)
-		return err
+		return c.agentStore.Put(context.Background(), "state-"+key, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(b))}), dynalock.WriteWithNoExpires())
 	}
 	return nil
 }
@@ -2648,7 +2650,9 @@ func (c Client) createTable(name string, global bool, regions []string) (string,
 		return "", err
 	}
 	if global {
-		replicate := &dynamodb.UpdateTableInput{}
+		replicate := &dynamodb.UpdateTableInput{
+			TableName: aws.String(name),
+		}
 		for _, region := range regions {
 			if region != c.Region {
 				replicate.ReplicaUpdates = append(replicate.ReplicaUpdates, dynamodb.ReplicationGroupUpdate{

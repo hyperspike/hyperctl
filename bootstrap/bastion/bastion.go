@@ -57,8 +57,8 @@ func (h *Host) Connect() error {
 		if err == nil {
 			goto done
 		}
-		time.Sleep(3 * time.Second)
-		if tries > 10 {
+		time.Sleep(5 * time.Second)
+		if tries > 20 {
 			log.Printf("failed to establish connection %v, %v\n", h.IP, err)
 			return errors.New("failed to establish new connection")
 		}
