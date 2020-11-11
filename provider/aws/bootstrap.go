@@ -1351,7 +1351,6 @@ sudo hyperctl boot`)
 			}
 			count++
 		}
-		return nil
 	})
 	run.AddNode("waitForInit", waitForInit)
 	run.AddEdge("createMasterAAsg", "waitForInit")
