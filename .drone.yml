@@ -79,3 +79,8 @@ steps:
     ref:
     - refs/tags/**
 
+---
+kind: signature
+hmac: dd0cce178904ccea5c73d400ad634ccff0b8366a580717f47f327a14cd5207c9
+
+...

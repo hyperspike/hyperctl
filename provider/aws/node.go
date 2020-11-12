@@ -90,7 +90,7 @@ func (c *Client) Boot() error {
 }
 
 
-func (c Client) startNode(count int) error {
+func (c *Client) startNode(count int) error {
 
 	if count > 35 {
 		return errors.New("giving up joining cluster after 35 tries")
@@ -126,7 +126,7 @@ func (c Client) startNode(count int) error {
 	return nil
 }
 
-func (c Client) startMaster(count int) error {
+func (c *Client) startMaster(count int) error {
 
 	agentName := "master/" + c.InstanceID()
 	log.Printf("creating agent: %s", agentName)
@@ -190,7 +190,7 @@ func unlock(lock dynalock.Locker) {
 	}
 }
 
-func (c Client) UploadBootstrapToken(key, token string) error {
+func (c *Client) UploadBootstrapToken(key, token string) error {
 	if _, err := c.GetAPIEndpoint() ; err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (c Client) UploadBootstrapToken(key, token string) error {
 	return nil
 }
 
-func (c Client) uploadClusterMeta(m masterData) error {
+func (c *Client) uploadClusterMeta(m masterData) error {
 	data, err := json.Marshal(m)
 	if err != nil {
 		log.Errorf("failed to marshal cluster metadata %v", err)
@@ -267,7 +267,7 @@ func (c *Client) controlPlaneMeta() (*masterData, error) {
 	return m, nil
 }
 
-func (c Client) controlPlaneInitialized() (bool, error) {
+func (c *Client) controlPlaneInitialized() (bool, error) {
 	m, err := c.controlPlaneMeta()
 	if err != nil {
 		return false, err
@@ -275,7 +275,7 @@ func (c Client) controlPlaneInitialized() (bool, error) {
 	return m.Initialized, nil
 }
 
-func (c Client) joinMaster() error {
+func (c *Client) joinMaster() error {
 
 	endpoint, err := c.GetAPIEndpoint()
 	if err != nil {
@@ -384,7 +384,7 @@ func machineID() error {
 /*
  * InitMaster is going to be funky as it needs to setup the cluster for things like CNI, AWS-IRSA, etc
  */
-func (c Client) initMaster() error {
+func (c *Client) initMaster() error {
 	// @TODO Kubeadm commands should probably hook into the Go Module
 	log.Info("initializing control plane")
 	m, err := c.controlPlaneMeta()

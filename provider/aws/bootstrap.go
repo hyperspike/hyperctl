@@ -37,22 +37,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-	/* state that will need to be destroyed
-	 *
-	 * VPC
-	 * loadbalancer
-	 * autoscaling groups
-	 * firewall nodes
-	 * launch templates
-	 * ssh key
-	 * KMS key
-	 * secret
-	 * dynamo table
-	 * IAM roles
-	 * IAM profiles
-	 * IAM identity provider
-	 */
-
 
 type Direction string
 const (
@@ -74,7 +58,7 @@ type Instance struct {
 	private string
 }
 
-func (c Client) CreateCluster() {
+func (c *Client) CreateCluster() {
 	_, vpcCidr, err := net.ParseCIDR(c.CIDR)
 	if err != nil {
 		log.Println(err)
@@ -82,6 +66,7 @@ func (c Client) CreateCluster() {
 	}
 
 	run := rund.New()
+
 
 	var key *ssh.Ssh
 	sshFn := rund.NewFuncOperator(func () error {
@@ -102,10 +87,7 @@ func (c Client) CreateCluster() {
 		if vpc == "" {
 			return errors.New("Failed to create VPC")
 		}
-		if err := c.saveState("vpc", []string{vpc}, true) ; err != nil {
-			return err
-		}
-		return nil
+		return c.saveState("vpc", []string{vpc}, true)
 	})
 	run.AddNode("vpc", vpcFn)
 	run.AddEdge("table", "vpc")
@@ -179,8 +161,7 @@ func (c Client) CreateCluster() {
 		if masterA == "" {
 			return errors.New("failed to create Master A subnet")
 		}
-		_ = c.saveState("masterA", []string{masterA}, false)
-		return nil
+		return c.saveState("masterA", []string{masterA}, true)
 	})
 	run.AddNode("masterASubnet", masterASubnetFn)
 	run.AddEdge("vpc", "masterASubnet")
@@ -192,8 +173,7 @@ func (c Client) CreateCluster() {
 		if masterB == "" {
 			return errors.New("failed to create Master B subnet")
 		}
-		_ = c.saveState("masterB", []string{masterB}, false)
-		return nil
+		return c.saveState("masterB", []string{masterB}, true)
 	})
 	run.AddNode("masterBSubnet", masterBSubnetFn)
 	run.AddEdge("vpc", "masterBSubnet")
@@ -205,8 +185,7 @@ func (c Client) CreateCluster() {
 		if masterC == "" {
 			return errors.New("failed to create Master C subnet")
 		}
-		_ = c.saveState("masterC", []string{masterC}, false)
-		return nil
+		return c.saveState("masterC", []string{masterC}, true)
 	})
 	run.AddNode("masterCSubnet", masterCSubnetFn)
 	run.AddEdge("vpc", "masterCSubnet")
@@ -218,8 +197,7 @@ func (c Client) CreateCluster() {
 		if nodeA == "" {
 			return errors.New("failed to create Node A subnet")
 		}
-		_ = c.saveState("nodeA", []string{nodeA}, false)
-		return nil
+		return c.saveState("nodeA", []string{nodeA}, true)
 	})
 	run.AddNode("nodeASubnet", nodeASubnetFn)
 	run.AddEdge("vpc", "nodeASubnet")
@@ -231,8 +209,7 @@ func (c Client) CreateCluster() {
 		if nodeB == "" {
 			return errors.New("failed to create Node B subnet")
 		}
-		_ = c.saveState("nodeB", []string{nodeB}, false)
-		return nil
+		return c.saveState("nodeB", []string{nodeB}, true)
 	})
 	run.AddNode("nodeBSubnet", nodeBSubnetFn)
 	run.AddEdge("vpc", "nodeBSubnet")
@@ -244,8 +221,7 @@ func (c Client) CreateCluster() {
 		if nodeC == "" {
 			return errors.New("failed to create Node C subnet")
 		}
-		_ = c.saveState("nodeC", []string{nodeC}, false)
-		return nil
+		return c.saveState("nodeC", []string{nodeC}, true)
 	})
 	run.AddNode("nodeCSubnet", nodeCSubnetFn)
 	run.AddEdge("vpc", "nodeCSubnet")
@@ -257,8 +233,7 @@ func (c Client) CreateCluster() {
 		if edgeA == "" {
 			return errors.New("failed to create Edge A subnet")
 		}
-		_ = c.saveState("edgeA", []string{edgeA}, false)
-		return nil
+		return c.saveState("edgeA", []string{edgeA}, true)
 	})
 	run.AddNode("edgeASubnet", edgeASubnetFn)
 	run.AddEdge("vpc", "edgeASubnet")
@@ -270,8 +245,7 @@ func (c Client) CreateCluster() {
 		if edgeB == "" {
 			return errors.New("failed to create Edge B subnet")
 		}
-		_ = c.saveState("edgeB", []string{edgeB}, false)
-		return nil
+		return c.saveState("edgeB", []string{edgeB}, true)
 	})
 	run.AddNode("edgeBSubnet", edgeBSubnetFn)
 	run.AddEdge("vpc", "edgeBSubnet")
@@ -283,8 +257,7 @@ func (c Client) CreateCluster() {
 		if edgeC == "" {
 			return errors.New("failed to create Edge C subnet")
 		}
-		_ = c.saveState("edgeC", []string{edgeC}, false)
-		return nil
+		return c.saveState("edgeC", []string{edgeC}, true)
 	})
 	run.AddNode("edgeCSubnet", edgeCSubnetFn)
 	run.AddEdge("vpc", "edgeCSubnet")
@@ -296,8 +269,7 @@ func (c Client) CreateCluster() {
 		if gw == "" {
 			return errors.New("failed to create internet gw")
 		}
-		_ = c.saveState("gw", []string{gw}, false)
-		return nil
+		return c.saveState("gw", []string{gw}, true)
 	})
 	run.AddNode("createGW", createGWFn)
 	run.AddEdge("vpc", "createGW")
@@ -309,8 +281,7 @@ func (c Client) CreateCluster() {
 		if gwRoute == "" {
 			return errors.New("failed to create internet gw Route")
 		}
-		_ = c.saveState("gwRoute", []string{gwRoute}, false)
-		return nil
+		return c.saveState("gwRoute", []string{gwRoute}, true)
 	})
 	run.AddNode("createRoute", createRouteFn)
 	run.AddEdge("createGW", "createRoute")
@@ -349,8 +320,7 @@ func (c Client) CreateCluster() {
 		if edgeSg == "" {
 			return errors.New("failed to create edge security group")
 		}
-		_ = c.saveState("edgeSg", []string{edgeSg}, false)
-		return nil
+		return c.saveState("edgeSg", []string{edgeSg}, true)
 	})
 	run.AddNode("edgeSg", edgeSgFn)
 	run.AddEdge("vpc", "edgeSg")
@@ -360,8 +330,7 @@ func (c Client) CreateCluster() {
 		if masterSg == "" {
 			return errors.New("failed to create master security group")
 		}
-		_ = c.saveState("masterSg", []string{masterSg}, false)
-		return nil
+		return c.saveState("masterSg", []string{masterSg}, true)
 	})
 	run.AddNode("masterSg", masterSgFn)
 	run.AddEdge("vpc", "masterSg")
@@ -371,8 +340,7 @@ func (c Client) CreateCluster() {
 		if masterLBSg == "" {
 			return errors.New("failed to create master load balancer security group")
 		}
-		_ = c.saveState("masterLBSg", []string{masterLBSg}, false)
-		return nil
+		return c.saveState("masterLBSg", []string{masterLBSg}, true)
 	})
 	run.AddNode("masterLBSg", masterLBSgFn)
 	run.AddEdge("vpc", "masterLBSg")
@@ -382,8 +350,7 @@ func (c Client) CreateCluster() {
 		if nodeSg == "" {
 			return errors.New("failed to create node security group")
 		}
-		_ = c.saveState("nodeSg", []string{nodeSg}, false)
-		return nil
+		return c.saveState("nodeSg", []string{nodeSg}, true)
 	})
 	run.AddNode("nodeSg", nodeSgFn)
 	run.AddEdge("vpc", "nodeSg")
@@ -497,8 +464,7 @@ func (c Client) CreateCluster() {
 			log.Errorf("failed to create fireware instance, %v", err)
 			return err
 		}
-		_ = c.saveState("fwA", []string{fwA.id, fwA.public}, false)
-		return nil
+		return c.saveState("fwA", []string{fwA.id, fwA.public}, true)
 	})
 	run.AddNode("fwA", fwAFn)
 	run.AddEdge("edgeASubnet", "fwA")
@@ -513,8 +479,7 @@ func (c Client) CreateCluster() {
 		if natRoute == "" {
 			return errors.New("failed to create nat route")
 		}
-		_ = c.saveState("natRoute", []string{natRoute}, false)
-		return nil
+		return c.saveState("natRoute", []string{natRoute}, true)
 	})
 	run.AddNode("natRoute", natRouteFn)
 	run.AddEdge("fwA", "natRoute")
@@ -931,8 +896,11 @@ sudo hyperctl boot`)
 	run.AddEdge("table", "irsaBucket")
 
 	oidcIAMFn := rund.NewFuncOperator(func() error {
-		_, err = c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
-		return err
+		arn, err := c.oidcIAM("https://s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/")
+		if err != nil {
+			return err
+		}
+		return c.saveState("oidcIrsa", []string{arn}, true)
 	})
 	run.AddNode("oidcIAM", oidcIAMFn)
 	run.AddEdge("table", "oidcIAM")
@@ -1017,7 +985,7 @@ sudo hyperctl boot`)
 		if err != nil {
 			return err
 		}
-		return c.saveState("nodeSecret", []string{secretId}, false)
+		return c.saveState("nodeSecret", []string{secretId}, true)
 	})
 	run.AddNode("nodeSecret", nodeSecret)
 	run.AddEdge("key", "nodeSecret")
@@ -1028,7 +996,7 @@ sudo hyperctl boot`)
 		if err != nil {
 			return err
 		}
-		return c.saveState("adminSecret", []string{secretAdminId}, false)
+		return c.saveState("adminSecret", []string{secretAdminId}, true)
 	})
 	run.AddNode("adminSecret", adminSecret)
 	run.AddEdge("key", "adminSecret")
@@ -1135,6 +1103,13 @@ sudo hyperctl boot`)
 		return nil
 	})
 	run.AddNode("globalTable", createGlobalTable)
+
+	updateBuilding := rund.NewFuncOperator(func() error {
+		globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
+		return globalStore.Put(context.Background(), c.Id, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String("BUILDING")}), dynalock.WriteWithNoExpires())
+	})
+	run.AddNode("building", updateBuilding)
+	run.AddEdge("globalTable", "building")
 
 	tableReadPolicyFn := rund.NewFuncOperator(func() error {
 		table, _ := c.getState("table", false)
@@ -1366,6 +1341,7 @@ sudo hyperctl boot`)
 
 // save state to the global state struct, and optionally commit remotely
 func (c *Client) saveState(key string, values []string, remote bool) error {
+	c.syncState.Lock()
 	c.state[key] = values
 	if remote {
 		if c.agentStore == nil {
@@ -1373,34 +1349,42 @@ func (c *Client) saveState(key string, values []string, remote bool) error {
 		}
 		b, err := json.Marshal(values)
 		if err != nil {
+			c.syncState.Unlock()
 			log.Errorf("state key: %s, failed to encode value to json, %v", key, err)
 			return err
 		}
+		c.syncState.Unlock()
 		return c.agentStore.Put(context.Background(), "state-"+key, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String(string(b))}), dynalock.WriteWithNoExpires())
 	}
+	c.syncState.Unlock()
 	return nil
 }
 
 // get state from the global state struct, and optionally fetch remotely
 func (c *Client) getState(key string, remote bool) ([]string, error) {
+	c.syncState.Lock()
 	if remote {
 		if c.agentStore == nil {
 			c.agentStore = dynalock.New(dynamodb.New(c.Cfg), c.Id, "Agent")
 		}
 		ret, err := c.agentStore.Get(context.Background(), "state-"+key)
 		if err != nil {
+			c.syncState.Unlock()
 			log.Errorf("failed to get remote state %s, %v", key, err)
 			return []string{}, err
 		}
 		v := []string{}
 		err = json.Unmarshal([]byte(*(ret.AttributeValue().S)), &v)
 		if err != nil {
+			c.syncState.Unlock()
 			log.Errorf("state key: %s, failed to decode json to string, %v", key, err)
 			return []string{}, err
 		}
 		c.state[key] = v
+		c.syncState.Unlock()
 		return v, nil
 	}
+	c.syncState.Unlock()
 	return c.state[key], nil
 }
 
@@ -1454,7 +1438,7 @@ func (c *Client) globalDB(regions []string) (string, error) {
 	return globalTable, nil
 }
 
-func (c Client) tag(ids []string, t map[string]string) {
+func (c *Client) tag(ids []string, t map[string]string) {
 	tags := []ec2.Tag{}
 
 	for k, v := range t {
@@ -1476,12 +1460,12 @@ func (c Client) tag(ids []string, t map[string]string) {
 	log.Printf("%v\n", res)
 }
 
-func (c Client) tagWithName(id string) {
+func (c *Client) tagWithName(id string) {
 	c.tag([]string{id}, map[string]string{
 		"Name": c.Id,
 	})
 }
-func (c Client) azs() ([]string, error) {
+func (c *Client) azs() ([]string, error) {
 
 	svc := ec2.New(c.Cfg)
 	input := &ec2.DescribeAvailabilityZonesInput{
@@ -1517,7 +1501,7 @@ func (c Client) azs() ([]string, error) {
 	return ret, nil
 }
 
-func (c Client) vpc(cidr string) string {
+func (c *Client) vpc(cidr string) string {
 	input := &ec2.CreateVpcInput{
 		CidrBlock: aws.String(cidr),
 	}
@@ -1594,7 +1578,7 @@ func (c Client) vpc(cidr string) string {
 }
 
 // create subnets
-func (c Client) subnet(vpc string, cidr string, name string, public bool, az string) string {
+func (c *Client) subnet(vpc string, cidr string, name string, public bool, az string) string {
 	input := &ec2.CreateSubnetInput{
 		CidrBlock:          aws.String(cidr),
 		VpcId:              aws.String(vpc),
@@ -1660,7 +1644,7 @@ func (c Client) subnet(vpc string, cidr string, name string, public bool, az str
 	return *result.Subnet.SubnetId
 }
 
-func (c Client) gateway(vpc string) string {
+func (c *Client) gateway(vpc string) string {
 	input := &ec2.CreateInternetGatewayInput{}
 	req := c.Ec2.CreateInternetGatewayRequest(input)
 	result, err := req.Send(context.Background())
@@ -1707,7 +1691,7 @@ func (c Client) gateway(vpc string) string {
 	return *result.InternetGateway.InternetGatewayId
 }
 
-func (c Client) routeTable(vpc string, gateway string, cidr string) string {
+func (c *Client) routeTable(vpc string, gateway string, cidr string) string {
 	input := &ec2.CreateRouteTableInput{
 		VpcId: aws.String(vpc),
 	}
@@ -1760,7 +1744,7 @@ func (c Client) routeTable(vpc string, gateway string, cidr string) string {
 	return *result.RouteTable.RouteTableId
 }
 
-func (c Client) assocRoute(subnet string, table string) {
+func (c *Client) assocRoute(subnet string, table string) {
 	input := &ec2.AssociateRouteTableInput{
 		RouteTableId: aws.String(table),
 		SubnetId:     aws.String(subnet),
@@ -1787,7 +1771,7 @@ func (c Client) assocRoute(subnet string, table string) {
 
 // create security groups and rules
 
-func (c Client) securityGroup(vpc string, name string, description string) string {
+func (c *Client) securityGroup(vpc string, name string, description string) string {
 	groupName := strings.Join([]string{name, c.Id}, "-")
 	input := &ec2.CreateSecurityGroupInput{
 		Description: aws.String(description),
@@ -1820,7 +1804,7 @@ func (c Client) securityGroup(vpc string, name string, description string) strin
 	return *result.CreateSecurityGroupOutput.GroupId
 }
 
-func (c Client) securityGroupRule(from int64, to int64, cidr string, proto string, description string) ec2.IpPermission {
+func (c *Client) securityGroupRule(from int64, to int64, cidr string, proto string, description string) ec2.IpPermission {
 
 	rule := ec2.IpPermission{
 		IpProtocol: aws.String(proto),
@@ -1850,7 +1834,7 @@ func (c Client) securityGroupRule(from int64, to int64, cidr string, proto strin
 	return rule
 }
 
-func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir Direction) string {
+func (c *Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir Direction) string {
 	switch dir {
 	case Ingress:
 		input := &ec2.AuthorizeSecurityGroupIngressInput{
@@ -1902,7 +1886,7 @@ func (c Client) securityGroupRuleApply(sg string, rules []ec2.IpPermission, dir 
 	return ""
 }
 
-func (c Client) instance(i *Instance) (*Instance, error) {
+func (c *Client) instance(i *Instance) (*Instance, error) {
 	if i.root == 0 {
 		i.root = 20
 	}
@@ -2029,7 +2013,7 @@ func (c Client) instance(i *Instance) (*Instance, error) {
 	return i, nil
 }
 
-func (c Client) instanceProfile(name string) (string, error) {
+func (c *Client) instanceProfile(name string) (string, error) {
 	svc := iam.New(c.Cfg)
 	input := &iam.CreateInstanceProfileInput{
 		InstanceProfileName: aws.String(name),
@@ -2089,7 +2073,7 @@ func (c Client) instanceProfile(name string) (string, error) {
 	return *result.InstanceProfile.InstanceProfileName, nil
 }
 
-func (c Client) addRoleInstance(name, role string) error {
+func (c *Client) addRoleInstance(name, role string) error {
 	svc := iam.New(c.Cfg)
 	input := &iam.AddRoleToInstanceProfileInput{
 		InstanceProfileName: aws.String(name),
@@ -2127,7 +2111,7 @@ func (c Client) addRoleInstance(name, role string) error {
 }
 
 
-func (c Client) kms(name string) (string, string, error) {
+func (c *Client) kms(name string) (string, string, error) {
 	svc := kms.New(c.Cfg)
 	input := &kms.CreateKeyInput{
 		Tags: []kms.Tag{
@@ -2181,7 +2165,7 @@ func (c Client) kms(name string) (string, string, error) {
 	return *result.KeyMetadata.KeyId, *result.KeyMetadata.Arn, nil
 }
 
-func (c Client) secret(name string, key string, secret string) (string, error) {
+func (c *Client) secret(name string, key string, secret string) (string, error) {
 
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.CreateSecretInput{
@@ -2243,7 +2227,7 @@ func (c Client) secret(name string, key string, secret string) (string, error) {
 	return *result.ARN, nil
 }
 
-func (c Client) key(name string, s *ssh.Ssh) string {
+func (c *Client) key(name string, s *ssh.Ssh) string {
 	input := &ec2.ImportKeyPairInput{
 		KeyName: aws.String(name),
 		PublicKeyMaterial: s.PublicKey,
@@ -2269,7 +2253,7 @@ func (c Client) key(name string, s *ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
-func (c Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) error {
+func (c *Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) error {
 	svc := autoscaling.New(c.Cfg)
 	t := []autoscaling.Tag{}
 	for k, v := range tags {
@@ -2317,10 +2301,10 @@ func (c Client) createASG(name, template, subnet, lb string, min, max, desired i
 		return err
 	}
 
-	return  nil
+	return nil
 }
 
-func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string) (string, error) {
+func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data string) (string, error) {
 	svc := autoscaling.New(c.Cfg)
 	input := &autoscaling.CreateLaunchConfigurationInput{
 		IamInstanceProfile:      aws.String(role),
@@ -2382,7 +2366,7 @@ func (c Client) createLaunchTemplate(name, size, ami, role, key, sg, data string
 }
 
 /* @DEPRECATED mark for removal
-func (c Client) attachClusterAPI(lb, asg string) error {
+func (c *Client) attachClusterAPI(lb, asg string) error {
 	svc := autoscaling.New(c.Cfg)
 	input := &autoscaling.AttachLoadBalancersInput{
 		AutoScalingGroupName: aws.String(asg),
@@ -2414,7 +2398,7 @@ func (c Client) attachClusterAPI(lb, asg string) error {
 }
 */
 
-func (c Client) loadBalancer(name string, sg string, subnets []string) (string, error){
+func (c *Client) loadBalancer(name string, sg string, subnets []string) (string, error){
 	svc := elasticloadbalancing.New(c.Cfg)
 	input := &elasticloadbalancing.CreateLoadBalancerInput{
 		Listeners: []elasticloadbalancing.Listener{
@@ -2508,7 +2492,7 @@ func (c Client) loadBalancer(name string, sg string, subnets []string) (string, 
 	return *result.CreateLoadBalancerOutput.DNSName, nil
 }
 
-func (c Client) bucket(name string) (string, error) {
+func (c *Client) bucket(name string) (string, error) {
 	svc := s3.New(c.Cfg)
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(name),
@@ -2542,7 +2526,7 @@ func (c Client) bucket(name string) (string, error) {
 	return "arn:aws:s3:::"+name, nil
 }
 
-func (c Client) uploadString(bucket, path, body string) error {
+func (c *Client) uploadString(bucket, path, body string) error {
 	svc := s3.New(c.Cfg)
 	in := &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
@@ -2570,11 +2554,11 @@ func (c Client) uploadString(bucket, path, body string) error {
 	return nil
 }
 
-func (c Client) createLocalTable(name string) (string, error) {
+func (c *Client) createLocalTable(name string) (string, error) {
 	return c.createTable(name, false, []string{})
 }
 
-func (c Client) createTable(name string, global bool, regions []string) (string, error) {
+func (c *Client) createTable(name string, global bool, regions []string) (string, error) {
 	svc := dynamodb.New(c.Cfg)
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []dynamodb.AttributeDefinition{
@@ -2727,7 +2711,7 @@ func getCert(address string) (*x509.Certificate, error) {
 	return conn.ConnectionState().PeerCertificates[0], nil
 }
 
-func (c Client) oidcIAM(url string) (string, error) {
+func (c *Client) oidcIAM(url string) (string, error) {
 
 	addr := strings.ReplaceAll(url, "https://", "")
 	idx  := strings.IndexAny(addr, "/")
