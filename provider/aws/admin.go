@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-func (c Client) uploadAdminKeys() error {
+func (c *Client) uploadAdminKeys() error {
 	filename := "/etc/kubernetes/admin.conf"
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -63,7 +63,7 @@ type admin struct {
 	Key string `json:"ADMIN_CONF"`
 }
 
-func (c Client) FetchAdminKeys() (string, error) {
+func (c *Client) FetchAdminKeys() (string, error) {
 	svc := secretsmanager.New(c.Cfg)
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(c.Id+"-admin"),

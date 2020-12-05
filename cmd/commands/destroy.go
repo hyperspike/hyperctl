@@ -1,21 +1,15 @@
 package commands
 
 import (
-	"github.com/spf13/cobra"
-	/* "os"
-	// "strings"
-	// "regexp"
-	// log "github.com/sirupsen/logrus"
-	"context"
+	"os"
 	"fmt"
-	"github.com/linode/linodego"
-	"golang.org/x/oauth2"
 
-	"log"
-	"net/http" */
+	"github.com/spf13/cobra"
+	"hyperspike.io/hyperctl/provider/aws"
 )
 
 func init() {
+	destroyCmd.SetUsageTemplate("Usage:\n  hyperctl destroy [cluster-id] ...\n\nFlags:\n  -h, --help   help for destroy\n")
 	rootCmd.AddCommand(destroyCmd)
 }
 
@@ -23,39 +17,17 @@ var destroyCmd =  &cobra.Command {
 	Use: "destroy",
 	Short: "Destroy a hyperspike cluster",
 	Run: func(c *cobra.Command, args []string) {
-		/*
-		apiKey, ok := os.LookupEnv("LINODE_TOKEN")
-		if !ok {
-		log.Fatal("Could not find LINODE_TOKEN, please assert it is set.")
+		p := aws.Init("", "", "")
+		if len(args) == 0 {
+			fmt.Printf("\033[1;31mError:\033[0m please give a cluster id\n\n")
+			_ = c.Help()
+			os.Exit(1)
 		}
-		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
-
-		oauth2Client := &http.Client{
-			Transport: &oauth2.Transport{
-				Source: tokenSource,
-			},
-		}
-
-		linodeClient := linodego.NewClient(oauth2Client)
-		linodeClient.SetDebug(true)
-
-		clusters, err := linodeClient.ListLKEClusters(context.Background(), nil)
+		p.Id = args[0]
+		err := p.Destroy()
 		if err != nil {
-			log.Fatal(err)
+			os.Exit(1)
 		}
-		for _, c := range clusters {
-			fmt.Printf("%v\n", c)
-			if c.Label == "internal-spooler" {
-				fmt.Printf("cluster found destroying\n")
-				err = linodeClient.DeleteLKECluster(context.Background(), c.ID)
-				if err != nil {
-					log.Fatal(err)
-				}
-				os.Exit(0)
-			}
-		}
-		fmt.Printf("Cluster not found\n")
-		os.Exit(1)
-		*/
+		os.Exit(0)
 	},
 }

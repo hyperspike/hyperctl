@@ -78,7 +78,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [x] Track state for destruction
 * [x] Track global state
 * [ ] autocomplete on remote state search
-* [ ] cluster destroy
+* [x] cluster destroy
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [x] Switch from fmt to log (like argonaut)
 * [x] Automatically detect availability zones

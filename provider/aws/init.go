@@ -9,6 +9,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"context"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -23,6 +24,7 @@ import (
 type Client struct {
 	Cfg aws.Config
 	state map[string][]string
+	syncState *sync.RWMutex
 	Tags map[string]string
 	Id string
 	Ec2 *ec2.Client
@@ -39,7 +41,7 @@ type Client struct {
 	agentStore dynalock.Store
 }
 
-func Init(region, cidr, service string) Client {
+func Init(region, cidr, service string) *Client {
 	// Using the SDK's default configuration, loading additional config
 	// and credentials values from the environment variables, shared
 	// credentials, and shared configuration files
@@ -51,7 +53,7 @@ func Init(region, cidr, service string) Client {
 		panic("unable to load SDK config, " + err.Error())
 	}
 	c.Localized = false
-
+	c.syncState = &sync.RWMutex{}
 	// #nosec
 	h := sha1.New()
 	_, err = io.WriteString(h, strconv.FormatInt(time.Now().Unix(),10))
@@ -70,10 +72,10 @@ func Init(region, cidr, service string) Client {
 	c.master.Service = service
 	c.Ec2 = ec2.New(c.Cfg)
 
-	return c
+	return &c
 }
 
-func (c Client) accountId() {
+func (c *Client) accountId() {
 	svc := organizations.New(c.Cfg)
 	input := &organizations.ListAccountsInput{}
 

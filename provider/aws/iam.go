@@ -28,7 +28,7 @@ func (p policy) String() string {
 	return string(b)
 }
 
-func (c Client) AttachPolicy(role, policyArn string) error {
+func (c *Client) AttachPolicy(role, policyArn string) error {
 	svc := iam.New(c.Cfg)
 	input := &iam.AttachRolePolicyInput{
 		PolicyArn: aws.String(policyArn),
@@ -43,7 +43,7 @@ func (c Client) AttachPolicy(role, policyArn string) error {
 	return nil
 }
 
-func (c Client) CreatePolicy(name string, p policy) (string, error) {
+func (c *Client) CreatePolicy(name string, p policy) (string, error) {
 	svc := iam.New(c.Cfg)
 
 	input := &iam.CreatePolicyInput{
@@ -83,7 +83,7 @@ func (r role) String() string {
 	return string(b)
 }
 
-func (c Client) CreateRole(name string, r role) (string, error) {
+func (c *Client) CreateRole(name string, r role) (string, error) {
 	svc := iam.New(c.Cfg)
 
 	input := &iam.CreateRoleInput{

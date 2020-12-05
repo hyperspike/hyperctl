@@ -16,7 +16,7 @@ type Secret struct {
 	Token string `json:"TOKEN"`
 	CertKey string `json:"CERTKEY"`
 }
-func (c Client) SearchAMI(owner string, tags map[string]string) (string, string,string,error) {
+func (c *Client) SearchAMI(owner string, tags map[string]string) (string, string,string,error) {
 
 	var filters []ec2.Filter
 	for k, v := range tags {
@@ -110,25 +110,25 @@ func (c *Client) ClusterName() string {
 	return c.Id
 }
 
-func (c Client) InstanceID() string {
+func (c *Client) InstanceID() string {
 	if ! c.Localized {
 		_ = c.ClusterName()
 	}
 	return c.Instance
 }
-func (c Client) InstanceRegion() string {
+func (c *Client) InstanceRegion() string {
 	if ! c.Localized {
 		_ = c.ClusterName()
 	}
 	return c.Region
 }
-func (c Client) InstanceIP() string {
+func (c *Client) InstanceIP() string {
 	if ! c.Localized {
 		_ = c.ClusterName()
 	}
 	return c.IP
 }
-func (c Client) IsMaster() bool {
+func (c *Client) IsMaster() bool {
 	if ! c.Localized {
 		_ = c.ClusterName()
 	}
@@ -150,7 +150,7 @@ func (c *Client) GetAPIEndpoint() (string, error) {
 	return c.master.Endpoint, nil
 }
 
-func (c Client) GetAPICAHash() (string, error) {
+func (c *Client) GetAPICAHash() (string, error) {
 	if _, err := c.GetAPIEndpoint() ; err != nil {
 		return "", err
 	}
@@ -204,7 +204,7 @@ func (c *Client) GetAPIToken() (string, error) {
 	return c.APIToken, nil
 }
 
-func (c Client) GetAPICertKey() (string, error) {
+func (c *Client) GetAPICertKey() (string, error) {
 	if c.APICertKey == "" {
 		_, err := c.GetAPIToken()
 		if err != nil {

@@ -8,7 +8,7 @@ import (
 	// "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func (c Client) IRSAPolicy(bucketArn string) (string, error) {
+func (c *Client) IRSAPolicy(bucketArn string) (string, error) {
 	p := policy{
 		Statement: []statement{
 			{

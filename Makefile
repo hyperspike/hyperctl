@@ -13,7 +13,7 @@ BINS := hyperctl
 .PHONY: hyperctl
 
 $(BINS):
-	CGO_ENABLED=0  go build -v -ldflags "-X hyperspike.io/hyperctl.Version=${VERSION}" -o $@ ./cmd/
+	CGO_ENABLED=0  go build -v -ldflags "-s -w -X hyperspike.io/hyperctl.Version=${VERSION}" -o $@ ./cmd/
 
 build: $(BINS)
 
