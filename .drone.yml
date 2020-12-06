@@ -59,7 +59,7 @@ steps:
     GOCACHE: "/drone/src/cache"
   commands:
   - make build
-  - ./hyperctl VERSION
+  - ./hyperctl version
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
@@ -89,6 +89,6 @@ steps:
 
 ---
 kind: signature
-hmac: 9454b6ab7372dcd3875da49d527750e55c701ecd673901afaf2e3e50a4c341c7
+hmac: f581994c74483f330a7712d7072f0828c658bb723907d049a93d01cd5ddcc2ad
 
 ...

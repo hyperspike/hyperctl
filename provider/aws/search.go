@@ -214,3 +214,26 @@ func (c *Client) GetAPICertKey() (string, error) {
 
 	return c.APICertKey, nil
 }
+
+type Cluster struct {
+	Id string
+	Start  string
+	Health string
+}
+
+func (c Cluster) Name() string {
+	return c.Id
+}
+
+func (c Cluster) Age() string {
+	return c.Start
+}
+
+func (c Cluster) State() string {
+	return c.Health
+}
+
+func (c *Client) List() ([]Cluster, error) {
+
+	return []Cluster{}, nil
+}
