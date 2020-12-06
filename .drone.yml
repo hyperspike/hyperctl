@@ -52,7 +52,7 @@ steps:
     GOCACHE: "/drone/src/cache"
   commands:
   - make build
-- name: build
+- name: e2e
   image: graytshirt/golang:0.0.6
   environment:
     GOPATH: "/drone/src/go"
@@ -89,6 +89,6 @@ steps:
 
 ---
 kind: signature
-hmac: 53dda58b0dba803a614be3141c9e106081eb2c6fae60bd4c5358307c1da2f5e6
+hmac: 9454b6ab7372dcd3875da49d527750e55c701ecd673901afaf2e3e50a4c341c7
 
 ...
