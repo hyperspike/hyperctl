@@ -90,13 +90,13 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 ## Beta
 
-* [ ] arm support (not going to bother with user facing CLI, just machine images)
+* [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
 * [ ] Terraform provider
-* [ ] Edge node VPN access
+* [ ] Edge node VPN access ( voucher + cilium )
 * [ ] Plugins
   * [ ] support cilium-etcd and etcd-operator (optional)
   * [ ] support Multi-Cluster Mesh (optional, requires cilium-etcd)
-  * [ ] support gitifold (optional)
+  * [ ] support Gitifold (optional)
   * [ ] support ingress (optional, requires )
   * [ ] support CI (optional, requires ingress)
   * [ ] support CD (optional, requires ingress)
