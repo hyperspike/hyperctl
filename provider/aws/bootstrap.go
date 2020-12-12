@@ -1106,7 +1106,16 @@ sudo hyperctl boot`)
 
 	updateBuilding := rund.NewFuncOperator(func() error {
 		globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
-		return globalStore.Put(context.Background(), c.Id, dynalock.WriteWithAttributeValue(&dynamodb.AttributeValue{S: aws.String("BUILDING")}), dynalock.WriteWithNoExpires())
+
+		message := struct{
+			State string
+			Created int64 }{State: "BUILDING", Created: time.Now().Unix()}
+		attrVal, err := dynalock.MarshalStruct(&message)
+		if err != nil {
+			log.Errorf("failed to marshall state %v", err)
+			return err
+		}
+		return globalStore.Put(context.Background(), c.Id, dynalock.WriteWithAttributeValue(attrVal), dynalock.WriteWithNoExpires())
 	})
 	run.AddNode("building", updateBuilding)
 	run.AddEdge("globalTable", "building")
@@ -1312,6 +1321,7 @@ sudo hyperctl boot`)
 		globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
 		limit := 60 // 5 minutes
 		count := 0
+		globalStore.Get(context.Background(), c.Id)
 		for {
 			m, err := c.controlPlaneMeta()
 			if err != nil {

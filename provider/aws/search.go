@@ -3,6 +3,8 @@ package aws
 import (
 	"context"
 	"time"
+	"math"
+	"strconv"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -10,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/ec2metadata"
+	"github.com/wolfeidau/dynalock/v2"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 type Secret struct {
@@ -217,7 +221,7 @@ func (c *Client) GetAPICertKey() (string, error) {
 
 type Cluster struct {
 	Id string
-	Start  string
+	Start  int64
 	Health string
 }
 
@@ -225,8 +229,52 @@ func (c Cluster) Name() string {
 	return c.Id
 }
 
+func plural(count int, singular string) (result string) {
+         if (count == 1) || (count == 0) {
+                 result = strconv.Itoa(count) + " " + singular + " "
+         } else {
+                 result = strconv.Itoa(count) + " " + singular + "s "
+         }
+         return
+ }
+
+func secondsToHuman(input int64) (result string) {
+         years := math.Floor(float64(input) / 60 / 60 / 24 / 7 / 30 / 12)
+         seconds := input % (60 * 60 * 24 * 7 * 30 * 12)
+         months := math.Floor(float64(seconds) / 60 / 60 / 24 / 7 / 30)
+         seconds = input % (60 * 60 * 24 * 7 * 30)
+         weeks := math.Floor(float64(seconds) / 60 / 60 / 24 / 7)
+         seconds = input % (60 * 60 * 24 * 7)
+         days := math.Floor(float64(seconds) / 60 / 60 / 24)
+         seconds = input % (60 * 60 * 24)
+         hours := math.Floor(float64(seconds) / 60 / 60)
+         seconds = input % (60 * 60)
+         minutes := math.Floor(float64(seconds) / 60)
+         seconds = input % 60
+
+         if years > 0 {
+                 result = plural(int(years), "year") + plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else if months > 0 {
+                 result = plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else if weeks > 0 {
+                 result = plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else if days > 0 {
+                 result = plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else if hours > 0 {
+                 result = plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else if minutes > 0 {
+                 result = plural(int(minutes), "minute") + plural(int(seconds), "second")
+         } else {
+                 result = plural(int(seconds), "second")
+         }
+
+         return
+}
+
+
 func (c Cluster) Age() string {
-	return c.Start
+	now := time.Now().Unix()
+	return  secondsToHuman( now - c.Start )
 }
 
 func (c Cluster) State() string {
@@ -234,6 +282,24 @@ func (c Cluster) State() string {
 }
 
 func (c *Client) List() ([]Cluster, error) {
-
-	return []Cluster{}, nil
+	globalStore := dynalock.New(dynamodb.New(c.Cfg), "hyperspike", "Agent")
+	kv, err := globalStore.List(context.Background(), "hyperspike-")
+	if err != nil {
+		log.Errorf("failed to list clusters, %v", err)
+		return []Cluster{}, err
+	}
+	clusters := []Cluster{}
+	for _, k := range kv {
+		m := struct{
+			State string
+			Created int64
+		}{}
+		err := dynalock.UnmarshalStruct(k.AttributeValue(), &m)
+		if err != nil {
+			log.Errorf("failed to unmarshal %v", err)
+			continue
+		}
+		clusters = append(clusters, Cluster{Id: k.Key, Start: m.Created, Health: m.State})
+	}
+	return clusters, nil
 }

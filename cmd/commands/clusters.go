@@ -19,7 +19,7 @@ func Clusters() *cobra.Command {
 			p := aws.Init("", "", "")
 			list, err := p.List()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to get cluster list, %v", err)
+				fmt.Fprintf(os.Stderr, "failed to get cluster list, %v\n", err)
 				os.Exit(1)
 			}
 			for _, c := range list {
