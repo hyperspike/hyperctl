@@ -1,4 +1,4 @@
-FROM golang:1.15.5-alpine3.12 AS build
+FROM golang:1.15.6-alpine3.12 AS build
 
 COPY ./ $GOPATH/src/hyperspike/hyperctl
 
