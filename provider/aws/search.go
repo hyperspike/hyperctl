@@ -230,45 +230,45 @@ func (c Cluster) Name() string {
 }
 
 func plural(count int, singular string) (result string) {
-         if (count == 1) || (count == 0) {
-                 result = strconv.Itoa(count) + " " + singular + " "
-         } else {
-                 result = strconv.Itoa(count) + " " + singular + "s "
-         }
-         return
- }
+	if (count == 1) || (count == 0) {
+		result = strconv.Itoa(count) + " " + singular + " "
+	} else {
+		result = strconv.Itoa(count) + " " + singular + "s "
+	}
+	return
+}
 
 func secondsToHuman(input int64) (result string) {
-         years := math.Floor(float64(input) / 60 / 60 / 24 / 7 / 30 / 12)
-         seconds := input % (60 * 60 * 24 * 7 * 30 * 12)
-         months := math.Floor(float64(seconds) / 60 / 60 / 24 / 7 / 30)
-         seconds = input % (60 * 60 * 24 * 7 * 30)
-         weeks := math.Floor(float64(seconds) / 60 / 60 / 24 / 7)
-         seconds = input % (60 * 60 * 24 * 7)
-         days := math.Floor(float64(seconds) / 60 / 60 / 24)
-         seconds = input % (60 * 60 * 24)
-         hours := math.Floor(float64(seconds) / 60 / 60)
-         seconds = input % (60 * 60)
-         minutes := math.Floor(float64(seconds) / 60)
-         seconds = input % 60
+	years := math.Floor(float64(input) / 60 / 60 / 24 / 7 / 30 / 12)
+	seconds := input % (60 * 60 * 24 * 7 * 30 * 12)
+	months := math.Floor(float64(seconds) / 60 / 60 / 24 / 7 / 30)
+	seconds = input % (60 * 60 * 24 * 7 * 30)
+	weeks := math.Floor(float64(seconds) / 60 / 60 / 24 / 7)
+	seconds = input % (60 * 60 * 24 * 7)
+	days := math.Floor(float64(seconds) / 60 / 60 / 24)
+	seconds = input % (60 * 60 * 24)
+	hours := math.Floor(float64(seconds) / 60 / 60)
+	seconds = input % (60 * 60)
+	minutes := math.Floor(float64(seconds) / 60)
+	seconds = input % 60
 
-         if years > 0 {
-                 result = plural(int(years), "year") + plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else if months > 0 {
-                 result = plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else if weeks > 0 {
-                 result = plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else if days > 0 {
-                 result = plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else if hours > 0 {
-                 result = plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else if minutes > 0 {
-                 result = plural(int(minutes), "minute") + plural(int(seconds), "second")
-         } else {
-                 result = plural(int(seconds), "second")
-         }
+	if years > 0 {
+		result = plural(int(years), "year") + plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else if months > 0 {
+		result = plural(int(months), "month") + plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else if weeks > 0 {
+		result = plural(int(weeks), "week") + plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else if days > 0 {
+		result = plural(int(days), "day") + plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else if hours > 0 {
+		result = plural(int(hours), "hour") + plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else if minutes > 0 {
+		result = plural(int(minutes), "minute") + plural(int(seconds), "second")
+	} else {
+		result = plural(int(seconds), "second")
+	}
 
-         return
+	return
 }
 
 
@@ -290,16 +290,20 @@ func (c *Client) List() ([]Cluster, error) {
 	}
 	clusters := []Cluster{}
 	for _, k := range kv {
-		m := struct{
-			State string
-			Created int64
-		}{}
-		err := dynalock.UnmarshalStruct(k.AttributeValue(), &m)
+		state := k.AttributeValue().S
+		dyn := dynalock.New(dynamodb.New(c.Cfg), k.Key, "Agent")
+		ret, err := dyn.Get(context.Background(), "start")
 		if err != nil {
-			log.Errorf("failed to unmarshal %v", err)
+			log.Errorf("unable to fetch start for cluster %s, %v", k.Key, err)
 			continue
 		}
-		clusters = append(clusters, Cluster{Id: k.Key, Start: m.Created, Health: m.State})
+		s := ret.AttributeValue().S
+		n, err := strconv.ParseInt(*s, 10, 64)
+		if err != nil {
+			log.Errorf("unable to parse start for cluster %s, %v", k.Key, err)
+			continue
+		}
+		clusters = append(clusters, Cluster{Id: k.Key, Start: n, Health: *state})
 	}
 	return clusters, nil
 }
