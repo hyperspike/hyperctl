@@ -55,11 +55,16 @@ steps:
 - name: e2e
   image: graytshirt/golang:0.0.6
   environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: hyperspike_aws_access_key_id
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: hyperspike_aws_secret_access_key
     GOPATH: "/drone/src/go"
     GOCACHE: "/drone/src/cache"
   commands:
-  - make build
   - ./hyperctl version
+  - ./hyperctl create
+  - ./hyperctl destroy $(hyperctl clusters|awk '{print $1}')
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
   environment:
@@ -89,6 +94,6 @@ steps:
 
 ---
 kind: signature
-hmac: f581994c74483f330a7712d7072f0828c658bb723907d049a93d01cd5ddcc2ad
+hmac: fc01f43567460dc00404d1c4c29d7f52c22ef17028823285ca642561ef5542ee
 
 ...

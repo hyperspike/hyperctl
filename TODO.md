@@ -85,7 +85,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] Split logging into; to file on server and console on workstation
 * [x] upload etcd-healthcheck-client keys
 * [ ] falco
-* [ ] automated e2e
+* [x] automated e2e
 * [ ] cleanup AMI building
 
 ## Beta
