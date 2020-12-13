@@ -59,6 +59,7 @@ steps:
       from_secret: hyperspike_aws_access_key_id
     AWS_SECRET_ACCESS_KEY:
       from_secret: hyperspike_aws_secret_access_key
+    AWS_DEFAULT_REGION: us-east-2
     GOPATH: "/drone/src/go"
     GOCACHE: "/drone/src/cache"
   commands:
@@ -94,6 +95,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7909944dfb3769bedfc45249704c39ff3accb41accb3be3809914cd7e5016794
+hmac: c95b009a0663e4387c3037ca7d7111c7305e36349c2d9f480ceaa384521caef9
 
 ...
