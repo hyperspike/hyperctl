@@ -1119,6 +1119,7 @@ sudo hyperctl boot`)
 	})
 	run.AddNode("building", updateBuilding)
 	run.AddEdge("globalTable", "building")
+	run.AddEdge("table", "building")
 
 	tableReadPolicyFn := rund.NewFuncOperator(func() error {
 		table, _ := c.getState("table", false)
