@@ -48,8 +48,7 @@ steps:
     AWS_SECRET_ACCESS_KEY:
       from_secret: aws_secret_access_key
   commands:
-  - echo $${AWS_ACCESS_KEY_ID}
-  - echo $${AWS_SECRET_ACCESS_KEY}
+  - env
   - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
 - name: build
   image: graytshirt/golang:0.0.6
@@ -101,6 +100,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4123a418b3b7b07d63a0e82db25a3bf36298abbf46c51d26bd5b03593b87694d
+hmac: 7a3a3b9d8f0328a100d3130f961cf3a9ae906de8d2ff0eeef2852fd6324a64e3
 
 ...
