@@ -43,7 +43,13 @@ steps:
   environment:
     GOPATH: "/drone/src/go"
     GOCACHE: "/drone/src/cache"
+    AWS_ACCESS_KEY_ID:
+      from_secret: aws_access_key_id
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: aws_secret_access_key
   commands:
+  - echo $AWS_ACCESS_KEY_ID
+  - echo $AWS_SECRET_ACCESS_KEY
   - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
 - name: build
   image: graytshirt/golang:0.0.6
@@ -95,6 +101,6 @@ steps:
 
 ---
 kind: signature
-hmac: c95b009a0663e4387c3037ca7d7111c7305e36349c2d9f480ceaa384521caef9
+hmac: 792ca81693f3930ed984966128e9625272a126302febbaf77350363cc2defea9
 
 ...
