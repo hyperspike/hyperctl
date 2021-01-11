@@ -16,3 +16,25 @@ Hyperctl is an initial deployment mechanism for Hyperspike Kubernetes infrastruc
 The Hyperspike stack includes an [Alpine](https://alpinelinux.org/) base image, with [cri-o](https://github.com/cri-o/cri-o) container daemon, with [crun](https://github.com/containers/crun) container runtime, And [cilium](https://cilium.io/) cni. Which necessitates a custom configured Linux kernel for full eBPF support. On [AWS](https://github.com/aws/amazon-vpc-cni-k8s) cilium is setup in [ENI](https://docs.cilium.io/en/v1.8/concepts/networking/ipam/eni/) mode without [kube-proxy](https://docs.cilium.io/en/v1.8/gettingstarted/kubeproxy-free/).
 
 Hyperctl is designed to work with [Gitifold](https://github.com/hyperspike/gitifold.git) to provide fully a full Infra and Application pipeline.
+
+## Getting Started
+
+Get hyperctl, you can download binaries from the release page: https://github.com/hyperspike/hyperctl/releases/latest
+
+### Building From Source
+
+   go get -u hyperspike.io/hyperctl
+   cd $GOPATH/src/hyperspike.io/hyperctl
+   make build
+
+You're going to need an AWS Account and API Creds
+
+    export AWS_DEFAULT_REGION=us-east-2
+    export AWS_SECRET_ACCESS_KEY=<herp-derp>
+    export AWS_ACCESS_KEY_ID=<derp-herp>
+
+Then create your first cluster:
+
+    hyperctl create
+
+In addition to creating a cluster, the create command will drop 2 files into your current directory, a SSH key and kubeconfig, these can be used to ssh to your new bastion host and use your new cluster.
