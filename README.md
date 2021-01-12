@@ -21,14 +21,6 @@ Hyperctl is designed to work with [Gitifold](https://github.com/hyperspike/gitif
 
 Get hyperctl, you can download binaries from the release page: https://github.com/hyperspike/hyperctl/releases/latest
 
-### Building From Source
-
-To build hyperctl from source you will need [Golang](https://golang.org/) and [Make.](https://www.gnu.org/software/make/)
-
-    go get -u hyperspike.io/hyperctl
-    cd $GOPATH/src/hyperspike.io/hyperctl
-    make build
-
 ### First Cluster
 
 You're going to need an AWS Account and API Credentials.
@@ -42,3 +34,11 @@ Then create your first cluster:
     hyperctl create
 
 In addition to creating a cluster, the create command will drop 2 files into your current directory, a SSH key and kubeconfig, these can be used to ssh to your new bastion host and use your new cluster.
+
+### Building From Source
+
+To build hyperctl from source you will need [Golang](https://golang.org/) and [Make.](https://www.gnu.org/software/make/)
+
+    go get -u hyperspike.io/hyperctl
+    cd $GOPATH/src/hyperspike.io/hyperctl
+    make build
