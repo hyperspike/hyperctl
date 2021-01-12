@@ -23,11 +23,13 @@ Get hyperctl, you can download binaries from the release page: https://github.co
 
 ### Building From Source
 
-   go get -u hyperspike.io/hyperctl
-   cd $GOPATH/src/hyperspike.io/hyperctl
-   make build
+To build hyperctl from you are going to need Golang and Make, of some sort.
 
-You're going to need an AWS Account and API Creds
+    go get -u hyperspike.io/hyperctl
+    cd $GOPATH/src/hyperspike.io/hyperctl
+    make build
+
+You're going to need an AWS Account and API Credentials.
 
     export AWS_DEFAULT_REGION=us-east-2
     export AWS_SECRET_ACCESS_KEY=<herp-derp>
