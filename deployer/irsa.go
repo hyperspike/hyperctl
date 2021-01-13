@@ -77,8 +77,8 @@ func createTlsSecret(cert, key []byte, name, namespace string) *corev1.Secret { 
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "pod-identity-webhook",
-			Namespace: "kube-system",
+			Name: name,
+			Namespace: namespace,
 		},
 		StringData: map[string]string{
 			"tls.crt": string(cert),

@@ -76,15 +76,15 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] autocomplete on remote state search
 * [ ] structured logging for cri-o and kubernetes
-* [ ] cluster-autoscaler
 * [ ] aws-node-terminator (deployment on master not daemonset)
+* [ ] aws-ebs-csi
 * [ ] More Cilium configs, hubble, psp, serviceMonitors
 * [ ] nat instances per zone
 * [ ] Config options
   * [ ] existing vpc
   * [ ] control-plane size
   * [ ] worker size
-* [ ] falco
+* [x] cluster-autoscaler
 * [x] cleanup AMI building, faster, better caching, pipeline based
 * [x] Refactor to add concurrency, use directed acyclic graph for dependency mapping?
 * [x] fix alpine ami image
@@ -99,6 +99,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 ## Beta
 
 * [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
+* [ ] falco
 * [ ] Terraform provider
 * [ ] Edge node VPN access ( voucher + cilium )
 * [ ] Plugins

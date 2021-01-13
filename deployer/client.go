@@ -17,15 +17,17 @@ type Deployer struct {
 	pods string
 	cluster string
 	ciliumVersion string
+	accountId string
 }
 
-func New(endpoint, pods, cluster string) (*Deployer, error) {
+func New(endpoint, pods, cluster, accountId string) (*Deployer, error) {
 	_ = context.Background()
 	var c Deployer
 	c.endpoint = endpoint
 	c.pods = pods
 	c.cluster = cluster
 	c.ciliumVersion = hyperctl.CiliumVersion
+	c.accountId = accountId
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/admin.conf")
 	if err != nil {

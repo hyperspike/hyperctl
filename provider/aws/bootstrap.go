@@ -971,6 +971,67 @@ sudo hyperctl boot`)
 	run.AddNode("keyPolicy", keyPolicy)
 	run.AddEdge("key", "keyPolicy")
 
+	clusterAutoscalerPolicyFn := rund.NewFuncOperator(func() error {
+		nodeASGA, _ := c.getState("nodeASGA", false)
+		nodeASGB, _ := c.getState("nodeASGB", false)
+		nodeASGC, _ := c.getState("nodeASGC", false)
+		p := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"autoscaling:SetDesiredCapacity",
+						"autoscaling:TerminateInstanceInAutoScalingGroup",
+					},
+					Effect: "Allow",
+					Resource: []string{
+						nodeASGA[0],
+						nodeASGB[0],
+						nodeASGC[0],
+					},
+				},
+				{
+					Action: []string{
+						"autoscaling:DescribeAutoScalingGroups",
+						"autoscaling:DescribeAutoScalingInstances",
+						"autoscaling:DescribeLaunchConfigurations",
+						"autoscaling:DescribeTags",
+						"ec2:DescribeLaunchTemplateVersions",
+					},
+					Effect: "Allow",
+					Resource: []string{ "*" },
+				},
+			},
+		}
+		capolicy, err := c.CreatePolicy("cluster-autoscaler-" + c.Id, p)
+		if err != nil {
+			return err
+		}
+		return c.saveState("clusterAutoscalerPolicy", []string{capolicy}, true)
+	})
+	run.AddNode("clusterAutoscalerPolicy", clusterAutoscalerPolicyFn)
+	run.AddEdge("createNodeAAsg", "clusterAutoscalerPolicy")
+	run.AddEdge("createNodeBAsg", "clusterAutoscalerPolicy")
+	run.AddEdge("createNodeCAsg", "clusterAutoscalerPolicy")
+
+	clusterAutoscalerRoleFn := rund.NewFuncOperator(func() error {
+		_, err = c.CreateIRSARole("cluster-autoscaler-"+c.Id, "kube-system", "cluster-autoscaler")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("clusterAutoscalerRole", clusterAutoscalerRoleFn)
+	run.AddEdge("table", "clusterAutoscalerRole")
+	run.AddEdge("oidcIAM", "clusterAutoscalerRole")
+
+	attachClusterAutoscalerFn := rund.NewFuncOperator(func() error {
+		caPolicy, _ := c.getState("clusterAutoscalerPolicy", false)
+		return c.AttachPolicy("cluster-autoscaler-"+c.Id, caPolicy[0])
+	})
+	run.AddNode("attachClusterAutoscaler", attachClusterAutoscalerFn)
+	run.AddEdge("clusterAutoscalerRole", "attachClusterAutoscaler")
+	run.AddEdge("clusterAutoscalerPolicy", "attachClusterAutoscaler")
+
 	attachKeyMaster := rund.NewFuncOperator(func() error {
 		ebsEncryptPolicy, _ := c.getState("ebsPolicy", false)
 		return c.AttachPolicy("master-"+c.Id, ebsEncryptPolicy[0])
@@ -1224,7 +1285,7 @@ sudo hyperctl boot`)
 
 	createMasterAAsg := rund.NewFuncOperator(func() error {
 		masterA, _ := c.getState("masterA", false)
-		err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+		_, err = c.createASG("master-"+c.Id+"-a", "master-"+c.Id, masterA[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
 			"Name": "Master - "+c.Id+" - A",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1240,7 +1301,7 @@ sudo hyperctl boot`)
 	run.AddEdge("masterTemplate", "createMasterAAsg")
 	createMasterBAsg := rund.NewFuncOperator(func() error {
 		masterB, _ := c.getState("masterB", false)
-		if err := c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+		if _, err := c.createASG("master-"+c.Id+"-b", "master-"+c.Id, masterB[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
 			"Name": "Master - "+c.Id+" - B",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1255,7 +1316,7 @@ sudo hyperctl boot`)
 	run.AddEdge("masterTemplate", "createMasterBAsg")
 	createMasterCAsg := rund.NewFuncOperator(func() error {
 		masterC, _ := c.getState("masterC", false)
-		if err := c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
+		if _, err := c.createASG("master-"+c.Id+"-c", "master-"+c.Id, masterC[0], "master-lb-"+c.Id, 1, 1, 1, map[string]string{
 			"Name": "Master - "+c.Id+" - C",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1271,45 +1332,51 @@ sudo hyperctl boot`)
 
 	createNodeAAsg := rund.NewFuncOperator(func() error {
 		nodeA, _ := c.getState("nodeA", false)
-		if err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 1, 1, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - A",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
-		}); err != nil {
+			"kubernetes.io/cluster-autoscaler/enabled": "1",
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return c.saveState("nodeASGA", []string{asg}, true)
 	})
 	run.AddNode("createNodeAAsg", createNodeAAsg)
 	run.AddEdge("nodeASubnet", "createNodeAAsg")
 	run.AddEdge("nodeTemplate", "createNodeAAsg")
 	createNodeBAsg := rund.NewFuncOperator(func() error {
 		nodeB, _ := c.getState("nodeB", false)
-		if err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 1, 1, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - B",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
-		}); err != nil {
+			"kubernetes.io/cluster-autoscaler/enabled": "1",
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return c.saveState("nodeASGB", []string{asg}, true)
 	})
 	run.AddNode("createNodeBAsg", createNodeBAsg)
 	run.AddEdge("nodeBSubnet", "createNodeBAsg")
 	run.AddEdge("nodeTemplate", "createNodeBAsg")
 	createNodeCAsg := rund.NewFuncOperator(func() error {
 		nodeC, _ := c.getState("nodeC", false)
-		if err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 1, 1, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - C",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
-		}); err != nil {
+			"kubernetes.io/cluster-autoscaler/enabled": "1",
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return c.saveState("nodeASGC", []string{asg}, true)
 	})
 	run.AddNode("createNodeCAsg", createNodeCAsg)
 	run.AddEdge("nodeCSubnet", "createNodeCAsg")
@@ -2263,7 +2330,7 @@ func (c *Client) key(name string, s *ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
-func (c *Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) error {
+func (c *Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) (string, error) {
 	svc := autoscaling.New(c.Cfg)
 	t := []autoscaling.Tag{}
 	for k, v := range tags {
@@ -2308,10 +2375,35 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 			// Message from an error.
 			log.Error(err.Error())
 		}
-		return err
+		return "", err
 	}
 
-	return nil
+	i := &autoscaling.DescribeAutoScalingGroupsInput {
+		AutoScalingGroupNames: []string{
+			name,
+		},
+	}
+	d := svc.DescribeAutoScalingGroupsRequest(i)
+	dr, err := d.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case autoscaling.ErrCodeInvalidNextToken:
+				log.Errorln(autoscaling.ErrCodeInvalidNextToken, aerr.Error())
+			case autoscaling.ErrCodeResourceContentionFault:
+				log.Errorln(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+			default:
+				log.Errorln(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Errorln(err.Error())
+		}
+		return "", err
+	}
+
+	return *dr.AutoScalingGroups[0].AutoScalingGroupARN, nil
 }
 
 func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data string) (string, error) {

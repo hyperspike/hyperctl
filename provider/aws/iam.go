@@ -62,11 +62,20 @@ func (c *Client) CreatePolicy(name string, p policy) (string, error) {
 
 type principal map[string]string
 
+type stringEquals map[string]string
+type stringLike map[string]string
+
+type condition struct {
+	StringEquals stringEquals `json:"StringEquals,omitempty"`
+	StringLike   stringLike   `json:"StringLike,omitempty"`
+}
+
 type roleStatement struct {
 	Action string `json:"Action"`
 	Principal principal `json:"Principal"`
 	Effect string `json:"Effect"`
 	Sid    string `json:"Sid"`
+	Condition condition `json:"Condition,omitempty"`
 }
 
 type role struct {
@@ -86,6 +95,39 @@ func (r role) String() string {
 func (c *Client) CreateRole(name string, r role) (string, error) {
 	svc := iam.New(c.Cfg)
 
+	input := &iam.CreateRoleInput{
+		Description: aws.String(name + " Role"),
+		Path: aws.String("/"),
+		AssumeRolePolicyDocument: aws.String(r.String()),
+		RoleName: aws.String(name),
+	}
+	resp, err := svc.CreateRoleRequest(input).Send(context.TODO())
+	if err != nil {
+		log.Errorf("Failed to create role [%s] [%v]", name, err)
+		return "", err
+	}
+	return *resp.Role.Arn, nil
+}
+
+func (c *Client) CreateIRSARole(name, namespace, serviceaccount string) (string, error) {
+	svc := iam.New(c.Cfg)
+	irsaArn, _    := c.getState("oidcIrsa", false)
+	r := role{
+		Statement: []roleStatement{
+			{
+				Effect: "Allow",
+				Principal: principal{
+					"Federated": irsaArn[0],
+				},
+				Action: "sts:AssumeRoleWithWebIdentity",
+				Condition: condition{
+					StringEquals: stringEquals{
+						"s3."+c.Region+".amazonaws.com/"+c.Id+"-irsa/:sub": "system:serviceaccount:"+namespace+":"+serviceaccount,
+					},
+				},
+			},
+		},
+	}
 	input := &iam.CreateRoleInput{
 		Description: aws.String(name + " Role"),
 		Path: aws.String("/"),

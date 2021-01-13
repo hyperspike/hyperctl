@@ -65,6 +65,20 @@ func (c *Client) Destroy() error {
 	run.AddNode("masterRole", destroyMasterRoleFn)
 	run.AddEdge("masterTemplate", "masterRole")
 
+	destroyClusterAutoscaleRoleFn := rund.NewFuncOperator(func() error {
+		return c.destroyRole("cluster-autoscaler-"+c.Id)
+	})
+	run.AddNode("clusterAutoscaleRole", destroyClusterAutoscaleRoleFn)
+	destroyClusterAutoscalePolicyFn := rund.NewFuncOperator(func() error {
+		caPolicy, err := c.getState("clusterAutoscalerPolicy", true)
+		if err != nil {
+			return err
+		}
+		return c.destroyPolicy(caPolicy[0])
+	})
+	run.AddNode("clusterAutoscalePolicy", destroyClusterAutoscalePolicyFn)
+	run.AddEdge("clusterAutoscaleRole", "clusterAutoscalePolicy")
+
 	destroyMasterPolicyFn := rund.NewFuncOperator(func() error {
 		masterPolicy, err := c.getState("masterGeneralPolicy", true)
 		if err != nil {

@@ -470,7 +470,7 @@ func (c *Client) initMaster() error {
 	if err != nil {
 		return err
 	}
-	d, err := deployer.New(m.Endpoint, m.Pods, c.ClusterName())
+	d, err := deployer.New(m.Endpoint, m.Pods, c.ClusterName(), c.AccountID)
 	if err != nil {
 		return err
 	}
@@ -520,6 +520,9 @@ func (c *Client) initMaster() error {
 		return err
 	}
 	if err := d.EtcdCerts(); err != nil {
+		return err
+	}
+	if err := d.ClusterAutoscaler(); err != nil {
 		return err
 	}
 
