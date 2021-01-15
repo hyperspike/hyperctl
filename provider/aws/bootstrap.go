@@ -800,23 +800,15 @@ func (c *Client) CreateCluster() {
 	run.AddNode("nodeInstanceProfile", nodeInstanceProfile)
 	run.AddEdge("nodeRole", "nodeInstanceProfile")
 	masterRoleInstanceProfile := rund.NewFuncOperator(func() error {
-		err = c.addRoleInstance("master-"+c.Id, "master-"+c.Id)
-		if err != nil {
-			return err
-		}
-		return nil
+		return c.addRoleInstance("master-"+c.Id, "master-"+c.Id)
 	})
 	run.AddNode("masterRoleInstanceProfile", masterRoleInstanceProfile)
 	run.AddEdge("masterInstanceProfile", "masterRoleInstanceProfile")
 	nodeRoleInstanceProfile := rund.NewFuncOperator(func() error {
-		err = c.addRoleInstance("node-"+c.Id, "node-"+c.Id)
-		if err != nil {
-			return err
-		}
-		return nil
+		return c.addRoleInstance("node-"+c.Id, "node-"+c.Id)
 	})
 	run.AddNode("nodeRoleInstanceProfile", nodeRoleInstanceProfile)
-	run.AddEdge("masterRole", "nodeRoleInstanceProfile")
+	run.AddEdge("nodeInstanceProfile", "nodeRoleInstanceProfile")
 
 	amiFn := rund.NewFuncOperator(func() error {
 		ami, _, _, err := c.SearchAMI("751883444564", map[string]string{"name":"hyperspike-*"})
