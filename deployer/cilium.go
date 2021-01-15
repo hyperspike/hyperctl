@@ -99,10 +99,11 @@ func ciliumConfigMap(pods, cluster string) *corev1.ConfigMap { // {{{
 			"blacklist-conflicting-routes": "false",
 			"wait-bpf-mount": "false",
 			"masquerade": "true",
+			"egress-masquerade-interfaces": "eth0",
 			"enable-bpf-masquerade": "true",
 			"enable-xt-socket-fallback": "true",
 			"install-iptables-rules": "true",
-			"auto-direct-node-routes": "true",
+			"auto-direct-node-routes": "false", // getting some problems with this one
 			"native-routing-cidr": pods,
 			"enable-host-firewall": "false",
 			"kube-proxy-replacement":  "probe",
