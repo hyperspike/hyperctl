@@ -268,6 +268,7 @@ func clusterAutoscalerRole() *rbacv1.Role {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "cluster-autoscaler",
+			Namespace: "kube-system",
 			Labels: map[string]string {
 				"k8s-addon": "cluster-autoscaler.addons.k8s.io",
 				"k8s-app":   "cluster-autoscaler",
@@ -345,6 +346,7 @@ func clusterAutoscalerRoleBinding() *rbacv1.RoleBinding {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "cluster-autoscaler",
+			Namespace: "kube-system",
 			Labels: map[string]string {
 				"k8s-addon": "cluster-autoscaler.addons.k8s.io",
 				"k8s-app":   "cluster-autoscaler",
