@@ -41,4 +41,4 @@ To build hyperctl from source you will need [Golang](https://golang.org/) and [M
 
     go get -u hyperspike.io/hyperctl
     cd $GOPATH/src/hyperspike.io/hyperctl
-    make build
+    make install_local

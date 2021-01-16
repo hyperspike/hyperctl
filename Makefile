@@ -1,6 +1,7 @@
 PREFIX ?= /usr
 DESTDIR ?=
 VERSION ?= $(shell  if [ ! -z $$(git tag --points-at HEAD) ] ; then git tag --points-at HEAD|cat ; else  git rev-parse --short HEAD|cat; fi )
+INSTALL_PATH ?= $(shell IN=$$(env|grep -e ^PATH) ; arr=($${IN//\:/ }) ; for p in $${arr[@]} ; do p=$${p##PATH=} ; if [ -w $$p ] ; then echo "$$p" ; break ; fi ; done )
 REGISTRY ?= graytshirt
 RUNTIME ?= docker
 GOOS ?= linux
@@ -16,6 +17,9 @@ $(BINS):
 	CGO_ENABLED=0  go build -v -ldflags "-s -w -X hyperspike.io/hyperctl.Version=${VERSION}" -o $@ ./cmd/
 
 build: $(BINS)
+
+install_local: $(BINS)
+	install -s -m 0755 -v $^ $(INSTALL_PATH)/$^
 
 install: $(BINS)
 	install -s -m 0755 -v $^ $(DESTDIR)$(PREFIX)/bin/$^
