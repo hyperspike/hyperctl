@@ -100,6 +100,7 @@ func ciliumConfigMap(pods, cluster string) *corev1.ConfigMap { // {{{
 			"wait-bpf-mount": "false",
 			"masquerade": "true",
 			"egress-masquerade-interfaces": "eth0",
+			"devices": "eth0",
 			"enable-bpf-masquerade": "true",
 			"enable-xt-socket-fallback": "true",
 			"install-iptables-rules": "true",
