@@ -52,12 +52,11 @@ func (d *Deployer) IRSA() error {
 	if err != nil {
 		return err
 	}
-	ca = []byte(strings.ReplaceAll(string(ca), "\n", ""))
 	if err := d.r.Create(context.Background(), irsaDeployment()); err != nil {
 		log.Errorf("failed to create irsa deployment, %v", err)
 		return err
 	}
-
+	ca = []byte(strings.ReplaceAll(string(ca), "\n", "\\n"))
 	if err := d.r.Create(context.Background(), irsaWebhook(ca)); err != nil {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
