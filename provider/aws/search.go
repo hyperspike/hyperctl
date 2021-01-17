@@ -81,6 +81,9 @@ func (c *Client) ClusterName() string {
 	}
 	c.Instance = metadata.InstanceID
 	c.Region   = metadata.Region
+	if c.AccountID == "" {
+		c.AccountID = metadata.AccountID
+	}
 
 	req := c.Ec2.DescribeInstancesRequest(input)
 	result, err := req.Send(context.Background())
