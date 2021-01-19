@@ -19,7 +19,7 @@ $(BINS):
 build: $(BINS)
 
 install_local: $(BINS)
-	install -s -m 0755 -v $^ $(INSTALL_PATH)/$^
+	install -m 0755 -v $^ $(INSTALL_PATH)/$^
 
 install: $(BINS)
 	install -s -m 0755 -v $^ $(DESTDIR)$(PREFIX)/bin/$^
