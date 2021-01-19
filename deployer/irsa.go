@@ -103,13 +103,22 @@ func (d *Deployer) getTlsCert() ([]byte, error) { // {{{
 
 func (d *Deployer) getCACert() ([]byte, error) { // {{{
 	sa := &corev1.ServiceAccount{}
-	err := d.r.Get(context.Background(), types.NamespacedName{Name: "default", Namespace: "kube-system"}, sa)
-	if err != nil {
-		log.Errorf("failed to get irsa secret, %v", err)
-		return []byte(""), err
+	retries := 20
+	tries := 0
+	for {
+		err := d.r.Get(context.Background(), types.NamespacedName{Name: "default", Namespace: "kube-system"}, sa)
+		if err != nil {
+			if tries >= retries {
+				log.Errorf("failed to get irsa secret, %v", err)
+				return []byte{}, err
+			}
+			tries++
+		} else {
+			break
+		}
 	}
 	secret := &corev1.Secret{}
-	err = d.r.Get(context.Background(), types.NamespacedName{Name: sa.Secrets[0].Name, Namespace: "kube-system"}, secret)
+	err := d.r.Get(context.Background(), types.NamespacedName{Name: sa.Secrets[0].Name, Namespace: "kube-system"}, secret)
 	if err != nil {
 		log.Errorf("failed to get irsa secret, %v", err)
 		return []byte(""), err
