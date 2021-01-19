@@ -112,6 +112,7 @@ func (d *Deployer) getCACert() ([]byte, error) { // {{{
 				log.Errorf("failed to get irsa secret, %v", err)
 				return []byte{}, err
 			}
+			time.Sleep(3 * time.Second)
 			tries++
 		} else {
 			break
