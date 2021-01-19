@@ -40,6 +40,7 @@ func (d *Deployer) IRSA() error {
 		log.Errorf("failed to create irsa service, %v", err)
 		return err
 	}
+	/*
 	cert, key, err := d.generateCerts()
 	if err != nil {
 		return err
@@ -48,7 +49,8 @@ func (d *Deployer) IRSA() error {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
 	}
-	ca, err := d.getTlsCert()
+	*/
+	ca, err := d.getCACert()
 	if err != nil {
 		return err
 	}
@@ -96,6 +98,24 @@ func (d *Deployer) getTlsCert() ([]byte, error) { // {{{
 		return []byte(""), err
 	}
 	return secret.Data["tls.crt"], nil
+}
+// }}}
+
+func (d *Deployer) getCACert() ([]byte, error) { // {{{
+	sa := &corev1.ServiceAccount{}
+	err := d.r.Get(context.Background(), types.NamespacedName{Name: "default", Namespace: "kube-system"}, sa)
+	if err != nil {
+		log.Errorf("failed to get irsa secret, %v", err)
+		return []byte(""), err
+	}
+	secret := &corev1.Secret{}
+	err = d.r.Get(context.Background(), types.NamespacedName{Name: sa.Secrets[0].Name, Namespace: "kube-system"}, secret)
+	if err != nil {
+		log.Errorf("failed to get irsa secret, %v", err)
+		return []byte(""), err
+	}
+
+	return secret.Data["ca.crt"], nil
 }
 // }}}
 
@@ -225,7 +245,7 @@ func irsaDeployment() *appsv1.Deployment { // {{{
 					Containers: []corev1.Container{
 						{
 							Name: "pod-identity-webhook",
-							Image: "docker.io/graytshirt/irsa-webhook:0.0.1",
+							Image: "docker.io/amazon/amazon-eks-pod-identity-webhook:ed8c41f",
 							Command: []string{
 								"/webhook",
 							},
