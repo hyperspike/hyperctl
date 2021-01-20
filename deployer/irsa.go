@@ -12,7 +12,7 @@ import (
 	admv1  "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"strings"
+	// "strings"
 	"encoding/pem"
 	"crypto/rand"
 	"crypto/rsa"
@@ -40,7 +40,6 @@ func (d *Deployer) IRSA() error {
 		log.Errorf("failed to create irsa service, %v", err)
 		return err
 	}
-	/*
 	cert, key, err := d.generateCerts()
 	if err != nil {
 		return err
@@ -49,8 +48,7 @@ func (d *Deployer) IRSA() error {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
 	}
-	*/
-	ca, err := d.getCACert()
+	ca, err := d.getTlsCert()
 	if err != nil {
 		return err
 	}
@@ -58,7 +56,7 @@ func (d *Deployer) IRSA() error {
 		log.Errorf("failed to create irsa deployment, %v", err)
 		return err
 	}
-	ca = []byte(strings.ReplaceAll(string(ca), "\n", "\\n"))
+	//ca = []byte(strings.ReplaceAll(string(ca), "\n", "\\n"))
 	if err := d.r.Create(context.Background(), irsaWebhook(ca)); err != nil {
 		log.Errorf("failed to create irsa webhook, %v", err)
 		return err
@@ -260,7 +258,7 @@ func irsaDeployment() *appsv1.Deployment { // {{{
 								"/webhook",
 							},
 							Args: []string{
-								"--in-cluster",
+								"--in-cluster=false",
 								"--namespace=kube-system",
 								"--service-name=pod-identity-webhook",
 								"--tls-secret=pod-identity-webhook",
@@ -270,10 +268,17 @@ func irsaDeployment() *appsv1.Deployment { // {{{
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
+									Name: "cert",
+									MountPath: "/etc/webhook/certs",
+									ReadOnly: true,
+								},
+								/*
+								{
 									Name: "webhook-certs",
 									MountPath: "/var/run/app/certs",
 									ReadOnly: false,
 								},
+								*/
 							},
 						},
 					},
@@ -287,10 +292,20 @@ func irsaDeployment() *appsv1.Deployment { // {{{
 						"node-role.kubernetes.io/master": "",
 					},
 					Volumes: []corev1.Volume{
+						/*
 						{
 							Name: "webhook-certs",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+						*/
+						{
+							Name: "cert",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "pod-identity-webhook",
+								},
 							},
 						},
 					},
