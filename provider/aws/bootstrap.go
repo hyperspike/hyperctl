@@ -1324,7 +1324,7 @@ sudo hyperctl boot`)
 
 	createNodeAAsg := rund.NewFuncOperator(func() error {
 		nodeA, _ := c.getState("nodeA", false)
-		asg, err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 0, 1, 12, map[string]string{
 			"Name": "Node - "+c.Id+" - A",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1341,7 +1341,7 @@ sudo hyperctl boot`)
 	run.AddEdge("nodeTemplate", "createNodeAAsg")
 	createNodeBAsg := rund.NewFuncOperator(func() error {
 		nodeB, _ := c.getState("nodeB", false)
-		asg, err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 0, 1, 12, map[string]string{
 			"Name": "Node - "+c.Id+" - B",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1358,7 +1358,7 @@ sudo hyperctl boot`)
 	run.AddEdge("nodeTemplate", "createNodeBAsg")
 	createNodeCAsg := rund.NewFuncOperator(func() error {
 		nodeC, _ := c.getState("nodeC", false)
-		asg, err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 1, 1, 1, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 0, 1, 12, map[string]string{
 			"Name": "Node - "+c.Id+" - C",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -2339,6 +2339,7 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 		MaxSize:                 aws.Int64(max),
 		MinSize:                 aws.Int64(min),
 		DesiredCapacity:         aws.Int64(desired),
+		DefaultCooldown:         aws.Int64(30),
 		VPCZoneIdentifier:       aws.String(subnet),
 		Tags:                    t,
 	}
