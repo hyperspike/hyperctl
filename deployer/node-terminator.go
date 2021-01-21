@@ -251,11 +251,11 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 								},
 								{
 									Name: "POD_TERMINATION_GRACE_PERIOD",
-									Value: "15",
+									Value: "",
 								},
 								{
 									Name: "NODE_TERMINATIZON_GRACE_PERIOD",
-									Value: "20",
+									Value: "",
 								},
 								{
 									Name: "INSTANCE_METADATA_URL",
@@ -307,14 +307,18 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 								},
 								{
 									Name: "ENABLE_SPOT_INTERRUPTION_DRAINING",
-									Value: "true",
+									Value: "false",
 								},
 								{
 									Name: "ENABLE_SCHEDULED_EVENT_DRAINING",
-									Value: "true",
+									Value: "false",
 								},
 								{
 									Name: "ENABLE_REBALANCE_MONITORING",
+									Value: "false",
+								},
+								{
+									Name: "ENABLE_SQS_TERMINATION_DRAINING",
 									Value: "true",
 								},
 								{
