@@ -966,6 +966,7 @@ sudo hyperctl boot`)
 	run.AddEdge("key", "keyPolicy")
 
 	nodeTerminatorSQSFn := rund.NewFuncOperator(func() error {
+		log.Info("creating node-terminator SQS")
 		url, err := c.createSQS("node-terminator-"+c.Id, map[string]string{
 			"Name": "Node Terminator - "+c.Id,
 			"KubernetesCluster": c.Id,
@@ -975,15 +976,20 @@ sudo hyperctl boot`)
 			return err
 		}
 		c.master.SQS = url
+		log.Info("finished node-terminator SQS")
 		return c.saveState("nodeTerminatorSQS", []string{url}, true)
 	})
 	run.AddNode("nodeTerminatorSQS", nodeTerminatorSQSFn)
+	run.AddEdge("table", "nodeTerminatorSQS")
 
 	nodeTerminatorEventsFn := rund.NewFuncOperator(func() error {
+		log.Info("creating node-terminator Events")
 		if err := c.eventRule("node-term-"+c.Id, `{"source":["aws.autoscaling"],"detail-type":["EC2 Instance-terminate Lifecycle Action"]}`); err != nil {
+			log.Error("failed to add node-term rule")
 			return err
 		}
 		if err := c.eventTarget("node-term-"+c.Id, "arn:aws:sqs:"+c.Region+":"+c.AccountID+":node-terminator-"+c.Id); err != nil {
+			log.Error("failed to add node-term target")
 			return err
 		}
 		if err := c.eventRule("node-spot-term-"+c.Id, `{"source": ["aws.ec2"],"detail-type": ["EC2 Spot Instance Interruption Warning"]}`); err != nil {
@@ -1001,8 +1007,10 @@ sudo hyperctl boot`)
 		return nil
 	})
 	run.AddNode("nodeTerminatorEvents", nodeTerminatorEventsFn)
+	run.AddEdge("nodeTerminatorSQS", "nodeTerminatorEvents")
 
 	nodeTerminatorPolicyFn := rund.NewFuncOperator(func() error {
+		log.Info("creating node-terminator IAM Policy")
 		p := policy{
 			Statement: []statement{
 				{
@@ -1032,8 +1040,10 @@ sudo hyperctl boot`)
 		return c.saveState("nodeTerminatorPolicy", []string{ntPolicy}, true)
 	})
 	run.AddNode("nodeTerminatorPolicy", nodeTerminatorPolicyFn)
+	run.AddEdge("table", "nodeTerminatorPolicy")
 
 	nodeTerminatorRoleFn := rund.NewFuncOperator(func() error {
+		log.Info("creating node-terminator IAM Role")
 		_, err = c.CreateIRSARole("node-terminator-"+c.Id, "kube-system", "aws-node-termination-handler")
 		if err != nil {
 			return err
@@ -1041,7 +1051,11 @@ sudo hyperctl boot`)
 		return nil
 	})
 	run.AddNode("nodeTerminatorRole", nodeTerminatorRoleFn)
+	run.AddEdge("table", "nodeTerminatorRole")
+	run.AddEdge("oidcIAM", "nodeTerminatorRole")
+
 	attachNodeTerminatorFn := rund.NewFuncOperator(func() error {
+		log.Info("attaching node-terminator-policy")
 		p, _ := c.getState("nodeTerminatorPolicy", false)
 		return c.AttachPolicy("node-terminator-"+c.Id, p[0])
 	})
@@ -1414,7 +1428,7 @@ sudo hyperctl boot`)
 
 	createNodeAAsg := rund.NewFuncOperator(func() error {
 		nodeA, _ := c.getState("nodeA", false)
-		asg, err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 0, 1, 12, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-a", "node-"+c.Id, nodeA[0], "", 0, 12, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - A",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1432,7 +1446,7 @@ sudo hyperctl boot`)
 	run.AddEdge("nodeTemplate", "createNodeAAsg")
 	createNodeBAsg := rund.NewFuncOperator(func() error {
 		nodeB, _ := c.getState("nodeB", false)
-		asg, err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 0, 1, 12, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-b", "node-"+c.Id, nodeB[0], "", 0, 12, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - B",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -1450,7 +1464,7 @@ sudo hyperctl boot`)
 	run.AddEdge("nodeTemplate", "createNodeBAsg")
 	createNodeCAsg := rund.NewFuncOperator(func() error {
 		nodeC, _ := c.getState("nodeC", false)
-		asg, err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 0, 1, 12, map[string]string{
+		asg, err := c.createASG("node-"+c.Id+"-c", "node-"+c.Id, nodeC[0], "", 0, 12, 1, map[string]string{
 			"Name": "Node - "+c.Id+" - C",
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
@@ -2440,11 +2454,19 @@ func (c *Client) createSQS(name string, tags map[string]string) (string, error) 
 	}
 	req := svc.CreateQueueRequest(input)
 	resp, err := req.Send(context.Background())
-	if err == nil {
-		log.Errorln(resp)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				log.Errorln(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			log.Errorln(err.Error())
+		}
 		return "", err
 	}
-	log.Infoln(resp.QueueUrl)
 	return *resp.QueueUrl, nil
 }
 

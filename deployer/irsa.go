@@ -408,7 +408,7 @@ func (d *Deployer) generateCerts() ([]byte, []byte, error) { // {{{
 
 func irsaWebhook(ca []byte) *admv1.MutatingWebhookConfiguration { // {{{
 	ignore := admv1.Ignore
-	slash  := "/"
+	slash  := "/mutate"
 	return &admv1.MutatingWebhookConfiguration {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "MutatingWebhookConfiguration",
