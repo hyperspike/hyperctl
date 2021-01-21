@@ -44,6 +44,7 @@ type masterData struct {
 	Pods          string `json:"pods,omitempty"`
 	KeyARN        string `json:"keyarn,omitempty"`
 	Bucket        string `json:"bucket,omitempty"`
+	SQS           string `jons:"sqs,omitempty"`
 }
 
 var (
@@ -466,7 +467,8 @@ func (c *Client) initMaster() error {
 		KeyARN: m.KeyARN,
 		Bucket: m.Bucket,
 		Service: m.Service,
-		Pods: m.Pods})
+		Pods: m.Pods,
+		SQS: m.SQS})
 	if err != nil {
 		return err
 	}
@@ -523,6 +525,9 @@ func (c *Client) initMaster() error {
 		return err
 	}
 	if err := d.ClusterAutoscaler(); err != nil {
+		return err
+	}
+	if err := d.NodeTerminator(m.SQS); err != nil {
 		return err
 	}
 

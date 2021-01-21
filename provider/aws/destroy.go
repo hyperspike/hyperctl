@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
@@ -78,6 +79,29 @@ func (c *Client) Destroy() error {
 	})
 	run.AddNode("clusterAutoscalePolicy", destroyClusterAutoscalePolicyFn)
 	run.AddEdge("clusterAutoscaleRole", "clusterAutoscalePolicy")
+
+	destroyNodeTerminatorRoleFn := rund.NewFuncOperator(func() error {
+		return c.destroyRole("node-terminator-"+c.Id)
+	})
+	run.AddNode("nodeTerminatorRole", destroyNodeTerminatorRoleFn)
+	destroyNodeTerminatorPolicyFn := rund.NewFuncOperator(func() error {
+		caPolicy, err := c.getState("nodeTerminatorPolicy", true)
+		if err != nil {
+			return err
+		}
+		return c.destroyPolicy(caPolicy[0])
+	})
+	run.AddNode("nodeTerminatorPolicy", destroyNodeTerminatorPolicyFn)
+	run.AddEdge("nodeTerminatorRole", "nodeTerminatorPolicy")
+
+	destroyNodeTerminatorSQSFn := rund.NewFuncOperator(func() error {
+		url, err := c.getState("nodeTerminatorSQS", true)
+		if err != nil {
+			return err
+		}
+		return c.destroySQS(url[0])
+	})
+	run.AddNode("nodeTerminatorSQS", destroyNodeTerminatorSQSFn)
 
 	destroyMasterPolicyFn := rund.NewFuncOperator(func() error {
 		masterPolicy, err := c.getState("masterGeneralPolicy", true)
@@ -765,6 +789,25 @@ func (c *Client) terminateInstance(id string) error {
 	return nil
 }
 
+func (c *Client) destroySQS(url string) error {
+	svc := sqs.New(c.Cfg)
+
+	input := &sqs.DeleteQueueInput{
+		QueueUrl: aws.String(url),
+	}
+
+	req := svc.DeleteQueueRequest(input)
+	_, err := req.Send(context.TODO())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			log.Error(aerr.Error())
+		} else {
+			log.Error(err.Error())
+		}
+		return err
+	}
+	return nil
+}
 
 func (c *Client) destroyASG(name string) error {
 	svc := autoscaling.New(c.Cfg)

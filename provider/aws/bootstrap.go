@@ -29,6 +29,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -963,6 +965,90 @@ sudo hyperctl boot`)
 	run.AddNode("keyPolicy", keyPolicy)
 	run.AddEdge("key", "keyPolicy")
 
+	nodeTerminatorSQSFn := rund.NewFuncOperator(func() error {
+		url, err := c.createSQS("node-terminator-"+c.Id, map[string]string{
+			"Name": "Node Terminator - "+c.Id,
+			"KubernetesCluster": c.Id,
+			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
+		})
+		if err != nil {
+			return err
+		}
+		c.master.SQS = url
+		return c.saveState("nodeTerminatorSQS", []string{url}, true)
+	})
+	run.AddNode("nodeTerminatorSQS", nodeTerminatorSQSFn)
+
+	nodeTerminatorEventsFn := rund.NewFuncOperator(func() error {
+		if err := c.eventRule("node-term-"+c.Id, `{"source":["aws.autoscaling"],"detail-type":["EC2 Instance-terminate Lifecycle Action"]}`); err != nil {
+			return err
+		}
+		if err := c.eventTarget("node-term-"+c.Id, "arn:aws:sqs:"+c.Region+":"+c.AccountID+":node-terminator-"+c.Id); err != nil {
+			return err
+		}
+		if err := c.eventRule("node-spot-term-"+c.Id, `{"source": ["aws.ec2"],"detail-type": ["EC2 Spot Instance Interruption Warning"]}`); err != nil {
+			return err
+		}
+		if err := c.eventTarget("node-spot-term-"+c.Id, "arn:aws:sqs:"+c.Region+":"+c.AccountID+":node-terminator-"+c.Id); err != nil {
+			return err
+		}
+		if err := c.eventRule("node-rebalance-"+c.Id, `{"source": ["aws.ec2"],"detail-type": ["EC2 Instance Rebalance Recommendation"]}`); err != nil {
+			return err
+		}
+		if err := c.eventTarget("node-rebalance-"+c.Id, "arn:aws:sqs:"+c.Region+":"+c.AccountID+":node-terminator-"+c.Id); err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("nodeTerminatorEvents", nodeTerminatorEventsFn)
+
+	nodeTerminatorPolicyFn := rund.NewFuncOperator(func() error {
+		p := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"autoscaling:CompleteLifecycleAction",
+						"autoscaling:DescribeAutoScalingInstances",
+						"autoscaling:DescribeTags",
+						"ec2:DescribeInstances",
+					},
+					Effect: "Allow",
+					Resource: []string{ "*" },
+				},
+				{
+					Action: []string{
+						"sqs:DeleteMessage",
+						"sqs:ReceiveMessage",
+					},
+					Effect: "Allow",
+					Resource: []string{"arn:aws:sqs:"+c.Region+":"+c.AccountID+":node-terminator-"+c.Id},
+				},
+			},
+		}
+		ntPolicy, err := c.CreatePolicy("node-terminator-" + c.Id, p)
+		if err != nil {
+			return err
+		}
+		return c.saveState("nodeTerminatorPolicy", []string{ntPolicy}, true)
+	})
+	run.AddNode("nodeTerminatorPolicy", nodeTerminatorPolicyFn)
+
+	nodeTerminatorRoleFn := rund.NewFuncOperator(func() error {
+		_, err = c.CreateIRSARole("node-terminator-"+c.Id, "kube-system", "aws-node-termination-handler")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("nodeTerminatorRole", nodeTerminatorRoleFn)
+	attachNodeTerminatorFn := rund.NewFuncOperator(func() error {
+		p, _ := c.getState("nodeTerminatorPolicy", false)
+		return c.AttachPolicy("node-terminator-"+c.Id, p[0])
+	})
+	run.AddNode("attachNodeTerminator", attachNodeTerminatorFn)
+	run.AddEdge("nodeTerminatorRole", "attachNodeTerminator")
+	run.AddEdge("nodeTerminatorPolicy", "attachNodeTerminator")
+
 	clusterAutoscalerPolicyFn := rund.NewFuncOperator(func() error {
 		nodeASGA, _ := c.getState("nodeASGA", false)
 		nodeASGB, _ := c.getState("nodeASGB", false)
@@ -1274,6 +1360,7 @@ sudo hyperctl boot`)
 	run.AddEdge("irsaBucket", "uploadMeta")
 	run.AddEdge("key", "uploadMeta")
 	run.AddEdge("nodeSecret", "uploadMeta")
+	run.AddEdge("nodeTerminatorSQS", "uploadMeta")
 
 	createMasterAAsg := rund.NewFuncOperator(func() error {
 		masterA, _ := c.getState("masterA", false)
@@ -1282,6 +1369,7 @@ sudo hyperctl boot`)
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/master": "1",
+			"aws-node-termination-handler/managed": "1",
 		})
 		if err != nil {
 			return err
@@ -1298,6 +1386,7 @@ sudo hyperctl boot`)
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/master": "1",
+			"aws-node-termination-handler/managed": "1",
 		}); err != nil {
 			return err
 		}
@@ -1313,6 +1402,7 @@ sudo hyperctl boot`)
 			"KubernetesCluster": c.Id,
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/master": "1",
+			"aws-node-termination-handler/managed": "1",
 		}); err != nil {
 			return err
 		}
@@ -1330,6 +1420,7 @@ sudo hyperctl boot`)
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
 			"kubernetes.io/cluster-autoscaler/enabled": "1",
+			"aws-node-termination-handler/managed": "1",
 		})
 		if err != nil {
 			return err
@@ -1347,6 +1438,7 @@ sudo hyperctl boot`)
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
 			"kubernetes.io/cluster-autoscaler/enabled": "1",
+			"aws-node-termination-handler/managed": "1",
 		})
 		if err != nil {
 			return err
@@ -1364,6 +1456,7 @@ sudo hyperctl boot`)
 			strings.Join([]string{"kubernetes.io/cluster/", c.Id}, ""): "owned",
 			"kubernetes.io/role/node": "1",
 			"kubernetes.io/cluster-autoscaler/enabled": "1",
+			"aws-node-termination-handler/managed": "1",
 		})
 		if err != nil {
 			return err
@@ -2322,6 +2415,88 @@ func (c *Client) key(name string, s *ssh.Ssh) string {
 	return *result.ImportKeyPairOutput.KeyName
 }
 
+func (c *Client) createSQS(name string, tags map[string]string) (string, error) {
+	svc := sqs.New(c.Cfg)
+	input := &sqs.CreateQueueInput{
+		QueueName: aws.String(name),
+		Tags: tags,
+		Attributes: map[string]string{
+			"MessageRetentionPeriod": "300",
+			"Policy": `{
+	"Version": "2012-10-17",
+	"Id": "MyQueuePolicy",
+	"Statement": [{
+		"Effect": "Allow",
+		"Principal": {
+			"Service": ["events.amazonaws.com", "sqs.amazonaws.com"]
+		},
+		"Action": "sqs:SendMessage",
+		"Resource": [
+			"arn:aws:sqs:`+c.Region+`:`+c.AccountID+`:`+name+`"
+		]
+	}]
+}`,
+		},
+	}
+	req := svc.CreateQueueRequest(input)
+	resp, err := req.Send(context.Background())
+	if err == nil {
+		log.Errorln(resp)
+		return "", err
+	}
+	log.Infoln(resp.QueueUrl)
+	return *resp.QueueUrl, nil
+}
+
+func (c *Client) eventRule(name, pattern string) error {
+	svc := eventbridge.New(c.Cfg)
+	in := &eventbridge.PutRuleInput{
+		Name: aws.String(name),
+		EventPattern: aws.String(pattern),
+	}
+	req := svc.PutRuleRequest(in)
+	_, err := req.Send(context.TODO())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				log.Errorln(aerr.Error())
+			}
+		} else {
+			log.Errorln(err.Error())
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *Client) eventTarget(rule, target string) error {
+	svc := eventbridge.New(c.Cfg)
+	in := &eventbridge.PutTargetsInput{
+		Rule: aws.String(rule),
+		Targets: []eventbridge.Target{
+			{
+				Id:  aws.String("1"),
+				Arn: aws.String(target),
+			},
+		},
+	}
+	req := svc.PutTargetsRequest(in)
+	_, err := req.Send(context.TODO())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				log.Errorln(aerr.Error())
+			}
+		} else {
+			log.Errorln(err.Error())
+		}
+		return err
+	}
+	return nil
+}
+
 func (c *Client) createASG(name, template, subnet, lb string, min, max, desired int64, tags map[string]string) (string, error) {
 	svc := autoscaling.New(c.Cfg)
 	t := []autoscaling.Tag{}
@@ -2339,7 +2514,7 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 		MaxSize:                 aws.Int64(max),
 		MinSize:                 aws.Int64(min),
 		DesiredCapacity:         aws.Int64(desired),
-		DefaultCooldown:         aws.Int64(30),
+		DefaultCooldown:         aws.Int64(40),
 		VPCZoneIdentifier:       aws.String(subnet),
 		Tags:                    t,
 	}
@@ -2367,6 +2542,32 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
 			log.Error(err.Error())
+		}
+		return "", err
+	}
+
+	in := &autoscaling.PutLifecycleHookInput{
+		AutoScalingGroupName:aws.String(name),
+		LifecycleHookName:   aws.String("node-terminator-"+c.Id),
+		LifecycleTransition: aws.String("autoscaling:EC2_INSTANCE_TERMINATING"),
+		DefaultResult:       aws.String("CONTINUE"),
+		HeartbeatTimeout:    aws.Int64(80),
+	}
+
+	r := svc.PutLifecycleHookRequest(in)
+	_, err = r.Send(context.Background())
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case autoscaling.ErrCodeLimitExceededFault:
+				log.Errorln(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
+			case autoscaling.ErrCodeResourceContentionFault:
+				log.Errorln(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+			default:
+				log.Errorln(aerr.Error())
+			}
+		} else {
+			log.Errorln(err.Error())
 		}
 		return "", err
 	}
