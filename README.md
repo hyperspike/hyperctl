@@ -31,7 +31,7 @@ You're going to need an AWS Account and API Credentials.
 
 Then create your first cluster:
 
-    hyperctl create
+    hyperctl boot
 
 In addition to creating a cluster, the create command will drop 2 files into your current directory, a SSH key and kubeconfig, these can be used to ssh to your new bastion host and use your new cluster.
 
@@ -41,4 +41,4 @@ To build hyperctl from source you will need [Golang](https://golang.org/) and [M
 
     go get -u hyperspike.io/hyperctl
     cd $GOPATH/src/hyperspike.io/hyperctl
-    make install_local
+    make local_install

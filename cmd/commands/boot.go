@@ -1,35 +1,31 @@
 package commands
 
 import (
-	"os"
 	"github.com/spf13/cobra"
-	log "github.com/sirupsen/logrus"
 	"hyperspike.io/hyperctl/provider/aws"
 )
 
 func init() {
-	rootCmd.AddCommand(BootCommand())
+	rootCmd.AddCommand(bootCmd)
 }
+var region, cidr, service, vpcId, master, node string
+var bootCmd = bootCommand()
 
-var provider string
-
-func BootCommand() *cobra.Command {
-	var bootCmd =  &cobra.Command {
+func bootCommand() *cobra.Command {
+	var command = &cobra.Command {
 		Use: "boot",
-		Short: "boot a node into the cluster",
+		Short: "Create A Hyperspike Kubernetes Cluster",
 		Run: func(c *cobra.Command, args []string) {
-			if provider == "aws" {
-				p := aws.Init("", "", "")
-				err := p.Boot()
-				if err != nil {
-					os.Exit(1)
-				}
-			} else {
-				log.Fatalf("provider %s not supported at this time\n", provider)
-			}
+			p := aws.Init(region, cidr, service)
+			p.CreateCluster(vpcId, master, node)
 		},
 	}
 
-	bootCmd.Flags().StringVarP(&provider, "provider", "p", "aws", "the cloud provider")
-	return bootCmd
+	command.Flags().StringVarP(&region,  "region",  "r", "",     "The region to deploy to")
+	command.Flags().StringVarP(&cidr,    "cidr",    "c", "10.20.0.0/16",  "The network space to create")
+	command.Flags().StringVarP(&service, "service", "s", "172.16.0.0/18", "The service CIDR to create")
+	command.Flags().StringVarP(&vpcId,   "vpc-id",  "V", "",              "Deploy to an existing VPC, ignores cidr, use vpcId")
+	command.Flags().StringVarP(&master,  "control-plane-type", "C", "t3a.medium", "the control-plane instance type")
+	command.Flags().StringVarP(&node,    "node-type", "n", "t3a.medium", "the node instance type")
+	return command
 }

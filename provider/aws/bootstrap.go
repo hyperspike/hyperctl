@@ -61,7 +61,7 @@ type Instance struct {
 	private string
 }
 
-func (c *Client) CreateCluster() {
+func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 	_, vpcCidr, err := net.ParseCIDR(c.CIDR)
 	if err != nil {
 		log.Println(err)
@@ -828,8 +828,8 @@ func (c *Client) CreateCluster() {
 		bastionKey, _ := c.getState("bastionKey", false)
 		masterSg, _ := c.getState("masterSg", false)
 		masterProfile, _ := c.getState("masterProfile", false)
-		_, err = c.createLaunchTemplate("master-"+c.Id, "t3a.medium", ami[0], masterProfile[0], bastionKey[0], masterSg[0], `#!/bin/sh
-sudo hyperctl boot`)
+		_, err = c.createLaunchTemplate("master-"+c.Id, masterType, ami[0], masterProfile[0], bastionKey[0], masterSg[0], `#!/bin/sh
+sudo hyperctl node`)
 		if err != nil {
 			return err
 		}
@@ -847,8 +847,8 @@ sudo hyperctl boot`)
 		bastionKey, _ := c.getState("bastionKey", false)
 		nodeSg, _ := c.getState("nodeSg", false)
 		nodeProfile, _ := c.getState("nodeProfile", false)
-		_, err = c.createLaunchTemplate("node-"+c.Id, "t3a.medium", ami[0], nodeProfile[0], bastionKey[0], nodeSg[0], `#!/bin/sh
-sudo hyperctl boot`)
+		_, err = c.createLaunchTemplate("node-"+c.Id, nodeType, ami[0], nodeProfile[0], bastionKey[0], nodeSg[0], `#!/bin/sh
+sudo hyperctl node`)
 		if err != nil {
 			return err
 		}
@@ -2067,12 +2067,16 @@ func (c *Client) instance(i *Instance) (*Instance, error) {
 		i.root = 20
 	}
 	iType := ec2.InstanceTypeT3aMicro
-	if i.size == "t3amedium" {
+	if i.size == "t3a.medium" {
 		iType = ec2.InstanceTypeT3aMedium
-	} else if i.size == "t3axlarge" {
+	} else if i.size == "t3a.large" {
+		iType = ec2.InstanceTypeT3aLarge
+	} else if i.size == "t3a.xlarge" {
 		iType = ec2.InstanceTypeT3aXlarge
-	} else if i.size == "t3a2xlarge" {
+	} else if i.size == "t3a.2xlarge" {
 		iType = ec2.InstanceTypeT3a2xlarge
+	} else {
+		iType = ec2.InstanceType(i.size)
 	}
 	input := &ec2.RunInstancesInput{
 		BlockDeviceMappings: []ec2.BlockDeviceMapping{

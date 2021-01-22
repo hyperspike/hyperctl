@@ -18,7 +18,7 @@ $(BINS):
 
 build: $(BINS)
 
-install_local: $(BINS)
+local_install: $(BINS)
 	install -m 0755 -v $^ $(INSTALL_PATH)/$^
 
 install: $(BINS)
