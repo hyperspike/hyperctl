@@ -453,21 +453,21 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 
 	fwAFn := rund.NewFuncOperator(func() error {
 		bastionKey, _ := c.getState("bastionKey", false)
-		edgeA, _      := c.getState("edgeA", false)
+		edgeSub, _      := c.getState("edgeA", false)
 		edgeSg, _     := c.getState("edgeSg", false)
 		ami, _        := c.getState("amiFw", false)
-		fwA, err := c.instance(&Instance{
-			name: "Firewall - 1",
+		fw, err := c.instance(&Instance{
+			name: "Firewall - A",
 			ami: ami[0],
 			key: bastionKey[0],
-			subnet: edgeA[0],
+			subnet: edgeSub[0],
 			sg: edgeSg[0],
 			nat: true})
 		if err != nil {
 			log.Errorf("failed to create fireware instance, %v", err)
 			return err
 		}
-		return c.saveState("fwA", []string{fwA.id, fwA.public}, true)
+		return c.saveState("fwA", []string{fw.id, fw.public}, true)
 	})
 	run.AddNode("fwA", fwAFn)
 	run.AddEdge("edgeASubnet", "fwA")
@@ -475,74 +475,144 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 	run.AddEdge("edgeSg", "fwA")
 	run.AddEdge("amiFw", "fwA")
 
-	natRouteFn := rund.NewFuncOperator(func() error {
+	fwBFn := rund.NewFuncOperator(func() error {
+		bastionKey, _ := c.getState("bastionKey", false)
+		edgeSub, _      := c.getState("edgeB", false)
+		edgeSg, _     := c.getState("edgeSg", false)
+		ami, _        := c.getState("amiFw", false)
+		fw, err := c.instance(&Instance{
+			name: "Firewall - B",
+			ami: ami[0],
+			key: bastionKey[0],
+			subnet: edgeSub[0],
+			sg: edgeSg[0],
+			nat: true})
+		if err != nil {
+			log.Errorf("failed to create fireware instance, %v", err)
+			return err
+		}
+		return c.saveState("fwB", []string{fw.id, fw.public}, true)
+	})
+	run.AddNode("fwB", fwBFn)
+	run.AddEdge("edgeBSubnet", "fwB")
+	run.AddEdge("ssh-keys", "fwB")
+	run.AddEdge("edgeSg", "fwB")
+	run.AddEdge("amiFw", "fwB")
+
+	fwCFn := rund.NewFuncOperator(func() error {
+		bastionKey, _ := c.getState("bastionKey", false)
+		edgeSub, _      := c.getState("edgeC", false)
+		edgeSg, _     := c.getState("edgeSg", false)
+		ami, _        := c.getState("amiFw", false)
+		fw, err := c.instance(&Instance{
+			name: "Firewall - B",
+			ami: ami[0],
+			key: bastionKey[0],
+			subnet: edgeSub[0],
+			sg: edgeSg[0],
+			nat: true})
+		if err != nil {
+			log.Errorf("failed to create fireware instance, %v", err)
+			return err
+		}
+		return c.saveState("fwC", []string{fw.id, fw.public}, true)
+	})
+	run.AddNode("fwC", fwCFn)
+	run.AddEdge("edgeCSubnet", "fwC")
+	run.AddEdge("ssh-keys", "fwC")
+	run.AddEdge("edgeSg", "fwC")
+	run.AddEdge("amiFw", "fwC")
+
+	natRouteAFn := rund.NewFuncOperator(func() error {
 		vpc, _ := c.getState("vpc", false)
 		fwA, _ := c.getState("fwA", false)
 		natRoute := c.routeTable(vpc[0], fwA[0], "0.0.0.0/0")
 		if natRoute == "" {
 			return errors.New("failed to create nat route")
 		}
-		return c.saveState("natRoute", []string{natRoute}, true)
+		return c.saveState("natRouteA", []string{natRoute}, true)
 	})
-	run.AddNode("natRoute", natRouteFn)
-	run.AddEdge("fwA", "natRoute")
+	run.AddNode("natRouteA", natRouteAFn)
+	run.AddEdge("fwA", "natRouteA")
+	natRouteBFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		fw, _ := c.getState("fwB", false)
+		natRoute := c.routeTable(vpc[0], fw[0], "0.0.0.0/0")
+		if natRoute == "" {
+			return errors.New("failed to create nat route")
+		}
+		return c.saveState("natRouteB", []string{natRoute}, true)
+	})
+	run.AddNode("natRouteB", natRouteBFn)
+	run.AddEdge("fwB", "natRouteB")
+	natRouteCFn := rund.NewFuncOperator(func() error {
+		vpc, _ := c.getState("vpc", false)
+		fw, _ := c.getState("fwC", false)
+		natRoute := c.routeTable(vpc[0], fw[0], "0.0.0.0/0")
+		if natRoute == "" {
+			return errors.New("failed to create nat route")
+		}
+		return c.saveState("natRouteC", []string{natRoute}, true)
+	})
+	run.AddNode("natRouteC", natRouteCFn)
+	run.AddEdge("fwC", "natRouteC")
 
 	assocRouteMasterA := rund.NewFuncOperator(func() error {
 		masterA, _ := c.getState("masterA", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteA", false)
 		c.assocRoute(masterA[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteMasterA", assocRouteMasterA)
-	run.AddEdge("natRoute", "assocRouteMasterA")
+	run.AddEdge("natRouteA", "assocRouteMasterA")
 	run.AddEdge("masterASubnet", "assocRouteMasterA")
 	assocRouteMasterB := rund.NewFuncOperator(func() error {
 		masterB, _ := c.getState("masterB", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteB", false)
 		c.assocRoute(masterB[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteMasterB", assocRouteMasterB)
-	run.AddEdge("natRoute", "assocRouteMasterB")
+	run.AddEdge("natRouteB", "assocRouteMasterB")
 	run.AddEdge("masterASubnet", "assocRouteMasterB")
 	assocRouteMasterC := rund.NewFuncOperator(func() error {
 		masterC, _ := c.getState("masterC", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteC", false)
 		c.assocRoute(masterC[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteMasterC", assocRouteMasterC)
-	run.AddEdge("natRoute", "assocRouteMasterC")
+	run.AddEdge("natRouteC", "assocRouteMasterC")
 	run.AddEdge("masterCSubnet", "assocRouteMasterC")
 	assocRouteNodeA := rund.NewFuncOperator(func() error {
 		nodeA, _ := c.getState("nodeA", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteA", false)
 		c.assocRoute(nodeA[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteNodeA", assocRouteNodeA)
-	run.AddEdge("natRoute", "assocRouteNodeA")
+	run.AddEdge("natRouteA", "assocRouteNodeA")
 	run.AddEdge("nodeASubnet", "assocRouteNodeA")
 	assocRouteNodeB := rund.NewFuncOperator(func() error {
 		nodeB, _ := c.getState("nodeB", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteB", false)
 		c.assocRoute(nodeB[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteNodeB", assocRouteNodeB)
-	run.AddEdge("natRoute", "assocRouteNodeB")
+	run.AddEdge("natRouteB", "assocRouteNodeB")
 	run.AddEdge("nodeBSubnet", "assocRouteNodeB")
 	assocRouteNodeC := rund.NewFuncOperator(func() error {
 		nodeC, _ := c.getState("nodeC", false)
-		natRoute, _ := c.getState("natRoute", false)
+		natRoute, _ := c.getState("natRouteC", false)
 		c.assocRoute(nodeC[0], natRoute[0])
 		return nil
 	})
 	run.AddNode("assocRouteNodeC", assocRouteNodeC)
-	run.AddEdge("natRoute", "assocRouteNodeC")
+	run.AddEdge("natRouteC", "assocRouteNodeC")
 	run.AddEdge("nodeCSubnet", "assocRouteNodeC")
 
-	provisionFwA := rund.NewFuncOperator(func() error {
+	provisionFwAFn := rund.NewFuncOperator(func() error {
 		fwA, _ := c.getState("fwA", false)
 		fwHostA := bastion.New(fwA[1] + "/32" , 22, key.PrivateKey, "alpine")
 		err = fwHostA.Run([]string{
@@ -567,6 +637,7 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 			//"sudo iptables -I OUTPUT -j NFQUEUE",
 			//"sudo iptables -t nat -I INPUT -j NFQUEUE",
 			//"sudo iptables -t nat -I OUTPUT -j NFQUEUE",
+			"sudo rc-update add iptables",
 			"sudo rc-service iptables save",
 		})
 		if err != nil {
@@ -574,8 +645,64 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 		}
 		return nil
 	})
-	run.AddNode("provisionFwA", provisionFwA)
+	run.AddNode("provisionFwA", provisionFwAFn)
 	run.AddEdge("fwA", "provisionFwA")
+	provisionFwBFn := rund.NewFuncOperator(func() error {
+		fw, _ := c.getState("fwB", false)
+		fwHost := bastion.New(fw[1] + "/32" , 22, key.PrivateKey, "alpine")
+		err = fwHost.Run([]string{
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
+			"sudo apk update",
+			"sudo apk add -u openssh iptables",
+			`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
+			"sudo rc-service sshd restart",
+			"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
+			"sudo sysctl -p",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterCCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
+			"sudo rc-update add iptables",
+			"sudo rc-service iptables save",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("provisionFwB", provisionFwBFn)
+	run.AddEdge("fwB", "provisionFwB")
+	provisionFwCFn := rund.NewFuncOperator(func() error {
+		fw, _ := c.getState("fwC", false)
+		fwHost := bastion.New(fw[1] + "/32" , 22, key.PrivateKey, "alpine")
+		err = fwHost.Run([]string{
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/main/ >> /etc/apk/repositories'",
+			"sudo su -c 'echo http://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories'",
+			"sudo apk update",
+			"sudo apk add -u openssh iptables",
+			`sudo  sed -i -e 's/^\(AllowTcpForwarding\)\s\+\w\+/\1 yes/' /etc/ssh/sshd_config`,
+			"sudo rc-service sshd restart",
+			"sudo su -c 'echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf'",
+			"sudo sysctl -p",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + masterCCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeACidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeBCidr.String() + " -j MASQUERADE",
+			"sudo iptables -t nat -A POSTROUTING -o eth0 -s " + nodeCCidr.String() + " -j MASQUERADE",
+			"sudo rc-update add iptables",
+			"sudo rc-service iptables save",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("provisionFwC", provisionFwCFn)
+	run.AddEdge("fwC", "provisionFwC")
 
 	r := role{
 		Statement: []roleStatement{

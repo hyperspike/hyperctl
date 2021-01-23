@@ -214,14 +214,30 @@ func (c *Client) Destroy() error {
 	run.AddNode("asgMasterC", destroyASGMasterCFn)
 	run.AddEdge("asgMasterC", "masterTemplate")
 
-	destroyFirewallFn := rund.NewFuncOperator(func() error {
+	destroyFirewallAFn := rund.NewFuncOperator(func() error {
 		fw, err := c.getState("fwA", true)
 		if err != nil {
 			return err
 		}
 		return c.terminateInstance(fw[0])
 	})
-	run.AddNode("firewall", destroyFirewallFn)
+	run.AddNode("firewallA", destroyFirewallAFn)
+	destroyFirewallBFn := rund.NewFuncOperator(func() error {
+		fw, err := c.getState("fwB", true)
+		if err != nil {
+			return err
+		}
+		return c.terminateInstance(fw[0])
+	})
+	run.AddNode("firewallB", destroyFirewallBFn)
+	destroyFirewallCFn := rund.NewFuncOperator(func() error {
+		fw, err := c.getState("fwC", true)
+		if err != nil {
+			return err
+		}
+		return c.terminateInstance(fw[0])
+	})
+	run.AddNode("firewallC", destroyFirewallCFn)
 
 	destroyOIDCFn := rund.NewFuncOperator(func() error {
 		arn, err := c.getState("oidcIrsa", true)
@@ -396,7 +412,9 @@ func (c *Client) Destroy() error {
 		return c.destroySG(sg[0])
 	})
 	run.AddNode("sgEdge", destroySGEdgeFn)
-	run.AddEdge("firewall", "sgEdge")
+	run.AddEdge("firewallA", "sgEdge")
+	run.AddEdge("firewallB", "sgEdge")
+	run.AddEdge("firewallC", "sgEdge")
 	run.AddEdge("sgEdge", "vpc")
 
 	destroyGatewayFn := rund.NewFuncOperator(func() error {
@@ -413,16 +431,36 @@ func (c *Client) Destroy() error {
 	run.AddNode("gateway", destroyGatewayFn)
 	run.AddEdge("gateway", "vpc")
 
-	destroyNatRouteFn := rund.NewFuncOperator(func() error {
-		route, err := c.getState("natRoute", true)
+	destroyNatRouteAFn := rund.NewFuncOperator(func() error {
+		route, err := c.getState("natRouteA", true)
 		if err != nil {
 			return err
 		}
 		return c.destroyRouteTable(route[0])
 	})
-	run.AddNode("natRoute", destroyNatRouteFn)
-	run.AddEdge("firewall", "natRoute")
-	run.AddEdge("natRoute", "vpc")
+	run.AddNode("natRouteA", destroyNatRouteAFn)
+	run.AddEdge("firewallA", "natRouteA")
+	run.AddEdge("natRouteA", "vpc")
+	destroyNatRouteBFn := rund.NewFuncOperator(func() error {
+		route, err := c.getState("natRouteB", true)
+		if err != nil {
+			return err
+		}
+		return c.destroyRouteTable(route[0])
+	})
+	run.AddNode("natRouteB", destroyNatRouteBFn)
+	run.AddEdge("firewallB", "natRouteB")
+	run.AddEdge("natRouteB", "vpc")
+	destroyNatRouteCFn := rund.NewFuncOperator(func() error {
+		route, err := c.getState("natRouteC", true)
+		if err != nil {
+			return err
+		}
+		return c.destroyRouteTable(route[0])
+	})
+	run.AddNode("natRouteC", destroyNatRouteCFn)
+	run.AddEdge("firewallC", "natRouteC")
+	run.AddEdge("natRouteA", "vpc")
 
 	destroyGWRouteFn := rund.NewFuncOperator(func() error {
 		route, err := c.getState("gwRoute", true)
@@ -448,7 +486,9 @@ func (c *Client) Destroy() error {
 	run.AddEdge("asgMasterA", "vpc")
 	run.AddEdge("asgMasterB", "vpc")
 	run.AddEdge("asgMasterC", "vpc")
-	run.AddEdge("firewall", "vpc")
+	run.AddEdge("firewallA", "vpc")
+	run.AddEdge("firewallB", "vpc")
+	run.AddEdge("firewallC", "vpc")
 
 	destroyTableFn := rund.NewFuncOperator(func() error {
 		return c.destroyTable(c.Id)

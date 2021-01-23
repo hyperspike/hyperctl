@@ -71,19 +71,19 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 ## Alpha
 
-* [ ] Config options
+* [-] Config options
   * [ ] existing vpc
-  * [ ] control-plane size
-  * [ ] worker size
-* [ ] nat instances per zone
+  * [x] control-plane size
+  * [x] worker size
 * [ ] Split logging into; to file on server and console on workstation
-* [ ] Better cli ergonomics
 * [ ] structured logging for cri-o and kubernetes
 * [ ] Support Additional User-Set Tags
 * [ ] autocomplete on remote state search
 * [ ] More Kubernetes configs, cilium, psp, servicemonitors, resource requests
 * [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] aws-ebs-csi
+* [x] nat instances per zone
+* [x] Better cli ergonomics
 * [x] cluster-autoscaler
 * [x] aws-node-terminator (deployment on master not daemonset)
 * [x] cleanup AMI building, faster, better caching, pipeline based
