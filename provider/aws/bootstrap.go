@@ -1378,7 +1378,7 @@ sudo hyperctl node`)
 
 	createGlobalTable := rund.NewFuncOperator(func() error {
 		if err := c.isTable("hyperspike") ; err != nil {
-			_, err := c.globalDB([]string{c.Region, "us-east-2", "us-west-2"})
+			_, err := c.globalDB([]string{c.Region})
 			return err
 		}
 		return nil
