@@ -66,8 +66,10 @@ func Init(region, cidr, service string) *Client {
 	if region != "" {
 		c.Cfg.Region = region
 		c.Region = region
-		c.accountId()
+	} else {
+		c.Region = c.Cfg.Region
 	}
+	c.accountId()
 	c.CIDR = cidr
 	c.master.Service = service
 	c.Ec2 = ec2.New(c.Cfg)

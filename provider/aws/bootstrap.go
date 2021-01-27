@@ -505,7 +505,7 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 		edgeSg, _     := c.getState("edgeSg", false)
 		ami, _        := c.getState("amiFw", false)
 		fw, err := c.instance(&Instance{
-			name: "Firewall - B",
+			name: "Firewall - C",
 			ami: ami[0],
 			key: bastionKey[0],
 			subnet: edgeSub[0],
@@ -2195,6 +2195,9 @@ func (c *Client) instance(i *Instance) (*Instance, error) {
 	}
 	/* @TODO fix type casting here on aws-sdk upgrade */
 	iType := ec2.InstanceType(i.size)
+	if i.size == "" {
+		iType = ec2.InstanceType("t3a.micro")
+	}
 	/*
 	iType := ec2.InstanceTypeT3aMicro
 	if i.size == "t3a.medium" {

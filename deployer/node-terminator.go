@@ -165,6 +165,9 @@ func nodeTerminatorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 
 func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 	one := int32(1)
+	t := true
+	f := false
+	onethousand := int64(1000)
 
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -204,6 +207,13 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 						{
 							Name: "aws-node-termination-handler",
 							Image: "docker.io/amazon/aws-node-termination-handler:v1.12.0",
+							SecurityContext: &corev1.SecurityContext{
+								RunAsNonRoot: &t,
+								ReadOnlyRootFilesystem: &t,
+								RunAsUser: &onethousand,
+								RunAsGroup: &onethousand,
+								AllowPrivilegeEscalation: &f,
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name: "NODE_NAME",

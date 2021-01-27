@@ -315,7 +315,7 @@ func (c *Client) Destroy() error {
 		return c.destroySubnet(subnet[0])
 	})
 	run.AddNode("subnetEdgeA", destroySubnetEdgeAFn)
-	run.AddEdge("firewall", "subnetEdgeA")
+	run.AddEdge("firewallA", "subnetEdgeA")
 	run.AddEdge("subnetEdgeA", "vpc")
 	destroySubnetEdgeBFn := rund.NewFuncOperator(func() error {
 		subnet, err := c.getState("edgeB", true)
@@ -325,6 +325,7 @@ func (c *Client) Destroy() error {
 		return c.destroySubnet(subnet[0])
 	})
 	run.AddNode("subnetEdgeB", destroySubnetEdgeBFn)
+	run.AddEdge("firewallB", "subnetEdgeB")
 	run.AddEdge("subnetEdgeB", "vpc")
 	destroySubnetEdgeCFn := rund.NewFuncOperator(func() error {
 		subnet, err := c.getState("edgeC", true)
@@ -334,6 +335,7 @@ func (c *Client) Destroy() error {
 		return c.destroySubnet(subnet[0])
 	})
 	run.AddNode("subnetEdgeC", destroySubnetEdgeCFn)
+	run.AddEdge("firewallC", "subnetEdgeC")
 	run.AddEdge("subnetEdgeC", "vpc")
 
 	destroySubnetMasterAFn := rund.NewFuncOperator(func() error {
