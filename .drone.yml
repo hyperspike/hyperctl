@@ -64,7 +64,7 @@ steps:
     GOCACHE: "/drone/src/cache"
   commands:
   - ./hyperctl version
-  - ./hyperctl create
+  - ./hyperctl boot
   - ./hyperctl destroy $(./hyperctl clusters|awk '{print $1}')
 - name: cache-push
   image: meltwater/drone-cache:v1.1.0
@@ -95,6 +95,6 @@ steps:
 
 ---
 kind: signature
-hmac: c95b009a0663e4387c3037ca7d7111c7305e36349c2d9f480ceaa384521caef9
+hmac: bb9fd0d534405f33c3b71827dd836d89a5b645a06c727fb37c89137d1323e8a0
 
 ...
