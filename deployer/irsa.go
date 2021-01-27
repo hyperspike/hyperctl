@@ -99,6 +99,7 @@ func (d *Deployer) getTlsCert() ([]byte, error) { // {{{
 }
 // }}}
 
+/*
 func (d *Deployer) getCACert() ([]byte, error) { // {{{
 	sa := &corev1.ServiceAccount{}
 	retries := 20
@@ -126,6 +127,7 @@ func (d *Deployer) getCACert() ([]byte, error) { // {{{
 	return secret.Data["ca.crt"], nil
 }
 // }}}
+*/
 
 func irsaClusterRole() *rbacv1.ClusterRole { // {{{
 	return &rbacv1.ClusterRole{

@@ -1378,7 +1378,7 @@ sudo hyperctl node`)
 
 	createGlobalTable := rund.NewFuncOperator(func() error {
 		if err := c.isTable("hyperspike") ; err != nil {
-			_, err := c.globalDB([]string{c.Region, "us-east-2", "us-west-2"})
+			_, err := c.globalDB([]string{c.Region})
 			return err
 		}
 		return nil
@@ -2193,6 +2193,9 @@ func (c *Client) instance(i *Instance) (*Instance, error) {
 	if i.root == 0 {
 		i.root = 20
 	}
+	/* @TODO fix type casting here on aws-sdk upgrade */
+	iType := ec2.InstanceType(i.size)
+	/*
 	iType := ec2.InstanceTypeT3aMicro
 	if i.size == "t3a.medium" {
 		iType = ec2.InstanceTypeT3aMedium
@@ -2204,7 +2207,7 @@ func (c *Client) instance(i *Instance) (*Instance, error) {
 		iType = ec2.InstanceTypeT3a2xlarge
 	} else {
 		iType = ec2.InstanceType(i.size)
-	}
+	}*/
 	input := &ec2.RunInstancesInput{
 		BlockDeviceMappings: []ec2.BlockDeviceMapping{
 			{
