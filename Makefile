@@ -39,7 +39,7 @@ vet:
 .PHONY: sec
 sec:
 	@hash gosec > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		curl https://github.com/securego/gosec/releases/download/v2.4.0/gosec_2.4.0_linux_amd64.tar.gz -OL; \
+		curl https://github.com/securego/gosec/releases/download/v2.6.1/gosec_2.6.1_linux_amd64.tar.gz -OL; \
 		tar -xvf gosec*.tar.gz ; \
 		cp gosec $(GOPATH)/bin ; \
 		rm gosec* ; \
@@ -50,7 +50,7 @@ sec:
 lint:
 	@hash golangci-lint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
 		export BINARY="golangci-lint"; \
-		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin v1.24.0; \
+		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin v1.36.0; \
 	fi
 	golangci-lint run --timeout 5m -v
 
