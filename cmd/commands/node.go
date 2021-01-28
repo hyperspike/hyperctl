@@ -19,6 +19,13 @@ func NodeCommand() *cobra.Command {
 		Short: "boot a node into the cluster",
 		Hidden: true,
 		Run: func(c *cobra.Command, args []string) {
+			logFile, err := os.OpenFile("/var/log/hyperspike.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				panic(err)
+			 }
+			defer logFile.Close()
+			log.SetFormatter(&log.JSONFormatter{})
+			log.SetOutput(logFile)
 			if provider == "aws" {
 				p := aws.Init("", "", "")
 				err := p.Boot()

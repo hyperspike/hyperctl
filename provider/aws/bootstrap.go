@@ -457,7 +457,7 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 		edgeSg, _     := c.getState("edgeSg", false)
 		ami, _        := c.getState("amiFw", false)
 		fw, err := c.instance(&Instance{
-			name: "Firewall - A",
+			name: "Edge - "+c.Id+" - A",
 			ami: ami[0],
 			key: bastionKey[0],
 			subnet: edgeSub[0],
@@ -481,7 +481,7 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 		edgeSg, _     := c.getState("edgeSg", false)
 		ami, _        := c.getState("amiFw", false)
 		fw, err := c.instance(&Instance{
-			name: "Firewall - B",
+			name: "Edge - "+c.Id+" - B",
 			ami: ami[0],
 			key: bastionKey[0],
 			subnet: edgeSub[0],
@@ -505,7 +505,7 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 		edgeSg, _     := c.getState("edgeSg", false)
 		ami, _        := c.getState("amiFw", false)
 		fw, err := c.instance(&Instance{
-			name: "Firewall - C",
+			name: "Edge - "+c.Id+" - C",
 			ami: ami[0],
 			key: bastionKey[0],
 			subnet: edgeSub[0],
@@ -2235,7 +2235,7 @@ func (c *Client) instance(i *Instance) (*Instance, error) {
 				Tags: []ec2.Tag{
 					{
 						Key:   aws.String("Name"),
-						Value: aws.String(strings.Join([]string{i.name, c.Id}, " ")),
+						Value: aws.String(i.name),
 					},
 					{
 						Key:   aws.String("KubernetesCluster"),
