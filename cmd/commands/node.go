@@ -22,7 +22,8 @@ func NodeCommand() *cobra.Command {
 			logFile, err := os.OpenFile("/var/log/hyperspike.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 			if err != nil {
 				panic(err)
-			 }
+			}
+			// #nosec
 			defer logFile.Close()
 			log.SetFormatter(&log.JSONFormatter{})
 			log.SetOutput(logFile)
