@@ -17,7 +17,7 @@ import (
 	_ "github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go-v2/service/organizations"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/wolfeidau/dynalock/v2"
 )
 
@@ -78,35 +78,22 @@ func Init(region, cidr, service string) *Client {
 }
 
 func (c *Client) accountId() {
-	svc := organizations.New(c.Cfg)
-	input := &organizations.ListAccountsInput{}
+	svc := sts.New(c.Cfg)
+	input := &sts.GetCallerIdentityInput{}
 
-	req := svc.ListAccountsRequest(input)
+	req := svc.GetCallerIdentityRequest(input)
 	result, err := req.Send(context.Background())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
-			case organizations.ErrCodeAccessDeniedException:
-				log.Error(organizations.ErrCodeAccessDeniedException, aerr.Error())
-			case organizations.ErrCodeAWSOrganizationsNotInUseException:
-				log.Error(organizations.ErrCodeAWSOrganizationsNotInUseException, aerr.Error())
-			case organizations.ErrCodeInvalidInputException:
-				log.Error(organizations.ErrCodeInvalidInputException, aerr.Error())
-			case organizations.ErrCodeServiceException:
-				log.Error(organizations.ErrCodeServiceException, aerr.Error())
-			case organizations.ErrCodeTooManyRequestsException:
-				log.Error(organizations.ErrCodeTooManyRequestsException, aerr.Error())
 			default:
-				log.Error(aerr.Error())
+				log.Error("failed to get Account ID: "+aerr.Error())
 			}
 		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.Error(err.Error())
+			log.Error("failed to get Account ID: "+err.Error())
 		}
 		return
 	}
-
 	// log.Error(result)
-	c.AccountID = *result.Accounts[0].Id
+	c.AccountID = *result.Account
 }
