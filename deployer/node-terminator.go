@@ -209,7 +209,7 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 							Image: "docker.io/amazon/aws-node-termination-handler:v1.12.0",
 							SecurityContext: &corev1.SecurityContext{
 								RunAsNonRoot: &t,
-								ReadOnlyRootFilesystem: &t,
+								//ReadOnlyRootFilesystem: &t,
 								RunAsUser: &onethousand,
 								RunAsGroup: &onethousand,
 								AllowPrivilegeEscalation: &f,
