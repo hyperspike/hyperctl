@@ -2,7 +2,9 @@ package deployer
 
 import (
 	"context"
+	"strings"
 	log "github.com/sirupsen/logrus"
+	"hyperspike.io/hyperctl"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -168,8 +170,9 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 	t := true
 	f := false
 	onethousand := int64(1000)
+	zero := int64(0)
 
-	return &appsv1.Deployment{
+	app := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind: "Deployment",
 			APIVersion: "apps/v1",
@@ -375,4 +378,12 @@ func nodeTerminatorDeployment(queueUrl string) *appsv1.Deployment {
 			},
 		},
 	}
+
+	if strings.Contains(hyperctl.KubeVersion, "1.18") {
+		app.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser     = &zero
+		app.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup    = &zero
+		app.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot  = &f
+	}
+
+	return app
 }
