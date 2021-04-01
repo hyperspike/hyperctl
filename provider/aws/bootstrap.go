@@ -2769,7 +2769,7 @@ func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data strin
 				DeviceName: aws.String("/dev/xvda"),
 				Ebs: &autoscaling.Ebs{
 					VolumeSize: aws.Int64(80),
-					VolumeType: aws.String("gp3"),
+					VolumeType: aws.String("gp2"),
 				},
 			},
 		},
