@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"time"
 	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -34,11 +35,21 @@ func (c *Client) AttachPolicy(role, policyArn string) error {
 		PolicyArn: aws.String(policyArn),
 		RoleName:  aws.String(role),
 	}
-	req := svc.AttachRolePolicyRequest(input)
-	_, err := req.Send(context.TODO())
-	if err != nil {
-		log.Errorf("Failed to attach role [%s] to policy [%s] [%v]", role, policyArn, err)
-		return err
+	count := 0
+	limit := 15
+	for {
+		req := svc.AttachRolePolicyRequest(input)
+		_, err := req.Send(context.TODO())
+		if err != nil {
+			count++
+			if count > limit {
+				log.Errorf("Failed to attach role [%s] to policy [%s] [%v]", role, policyArn, err)
+				return err
+			}
+			time.Sleep(5 * time.Second)
+		} else {
+			break
+		}
 	}
 	return nil
 }

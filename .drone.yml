@@ -6,6 +6,18 @@ platform:
   os: linux
   arch: amd64
 
+notify:
+  image: drillster/drone-email
+  host: mail.d3fy.net
+  username: dan
+  port: 465
+  password:
+    from_secret: email_password
+  from: drone@hyperspike.io
+  recipients: [ dan@hyperspike.io ]
+  when:
+    status: [ changed, failure ]
+
 steps:
 - name: cache-pull
   image: meltwater/drone-cache:v1.1.0
@@ -95,6 +107,6 @@ steps:
 
 ---
 kind: signature
-hmac: a77498f8cfa8ce54f53b376b7374b9ca0a780b38b511b0294d6b0e4bdacfb469
+hmac: 1637688e729d919f1f96fb49674a328fe223f7735c37ed241a74f4aa71362adf
 
 ...
