@@ -57,6 +57,10 @@ steps:
     GOCACHE: "/drone/src/cache"
   commands:
   - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
+- name: docker-lint
+  image: ghcr.io/hadolint/hadolint:v2.0.0-alpine
+  commands:
+  - hadolint Dockerfile
 - name: build
   image: graytshirt/golang:0.0.6
   environment:
@@ -107,6 +111,6 @@ steps:
 
 ---
 kind: signature
-hmac: 1637688e729d919f1f96fb49674a328fe223f7735c37ed241a74f4aa71362adf
+hmac: d1c1d13509d243631e7e6d01acb50455ac60f4f0220bc8f3edf4cd98c2c1187b
 
 ...
