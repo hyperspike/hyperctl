@@ -79,7 +79,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] structured logging for cri-o and kubernetes
 * [ ] Support Additional User-Set Tags
 * [ ] autocomplete on remote state search
-* [ ] More Kubernetes configs, cilium, psp, servicemonitors, resource requests
+* [ ] More Kubernetes configs; cilium, psp, servicemonitors, resource requests, metrics-server, network policies
 * [ ] aws-ebs-csi
 * [x] Split logging into; to file on server and console on workstation
 * [x] nat instances per zone

@@ -949,6 +949,10 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 	})
 	run.AddNode("ami", amiFn)
 
+	edgeTemplateFn := rund.NewFunctionOperator(func() error {
+		log.Info("creating edge launch template")
+	})
+
 	masterTemplateFn := rund.NewFuncOperator(func() error {
 		log.Info("creating master launch template")
 		ami, _ := c.getState("ami", false)
@@ -2729,7 +2733,10 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 	}
 	input := &autoscaling.CreateAutoScalingGroupInput{
 		AutoScalingGroupName:    aws.String(name),
-		LaunchConfigurationName: aws.String(template),
+		LaunchTemplate:          &autoscaling.LaunchTemplateSpecification{
+			LaunchTemplateName: aws.String(template),
+			Version:            aws.String("$Latest"),
+		},
 		MaxInstanceLifetime:     aws.Int64(604800), // 1 week
 		MaxSize:                 aws.Int64(max),
 		MinSize:                 aws.Int64(min),
@@ -2821,33 +2828,36 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 }
 
 func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data string) (string, error) {
-	svc := autoscaling.New(c.Cfg)
-	input := &autoscaling.CreateLaunchConfigurationInput{
-		IamInstanceProfile:      aws.String(role),
-		ImageId:                 aws.String(ami),
-		BlockDeviceMappings:     []autoscaling.BlockDeviceMapping{
-			{
-				DeviceName: aws.String("/dev/xvda"),
-				Ebs: &autoscaling.Ebs{
-					VolumeSize: aws.Int64(80),
-					VolumeType: aws.String("gp2"),
+	input := &ec2.CreateLaunchTemplateInput{
+		LaunchTemplateData: &ec2.RequestLaunchTemplateData{
+			IamInstanceProfile:      &ec2.LaunchTemplateIamInstanceProfileSpecificationRequest{
+				Name: aws.String(role),
+			},
+			ImageId:                 aws.String(ami),
+			BlockDeviceMappings:     []ec2.LaunchTemplateBlockDeviceMappingRequest{
+				{
+					DeviceName: aws.String("/dev/xvda"),
+					Ebs: &ec2.LaunchTemplateEbsBlockDeviceRequest{
+						VolumeSize: aws.Int64(80),
+						VolumeType: ec2.VolumeType("gp2"),
+					},
 				},
 			},
+			InstanceType:            ec2.InstanceType(size),
+			KeyName:                 aws.String(key),
+			UserData:                aws.String(base64.StdEncoding.EncodeToString([]byte(data))),
+			SecurityGroups: []string{
+				sg,
+			},
 		},
-		InstanceType:            aws.String(size),
-		LaunchConfigurationName: aws.String(name),
-		KeyName:                 aws.String(key),
-		UserData:                aws.String(base64.StdEncoding.EncodeToString([]byte(data))),
-		SecurityGroups: []string{
-			sg,
-		},
+		LaunchTemplateName: aws.String(name),
 	}
 
-	var result *autoscaling.CreateLaunchConfigurationResponse
+	var result *ec2.CreateLaunchTemplateResponse
 	var err error
 	var count int
 	for {
-		req := svc.CreateLaunchConfigurationRequest(input)
+		req := c.Ec2.CreateLaunchTemplateRequest(input)
 		result, err = req.Send(context.Background())
 		log.Info(result)
 		if err != nil {
