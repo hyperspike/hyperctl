@@ -527,6 +527,9 @@ func (c *Client) initMaster() error {
 	if err := d.ClusterAutoscaler(); err != nil {
 		return err
 	}
+	if err := d.Hypergrade(); err != nil {
+		return err
+	}
 	if err := d.NodeTerminator(m.SQS); err != nil {
 		return err
 	}

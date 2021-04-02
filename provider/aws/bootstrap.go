@@ -1190,6 +1190,7 @@ sudo hyperctl node`)
 	run.AddEdge("nodeTerminatorRole", "attachNodeTerminator")
 	run.AddEdge("nodeTerminatorPolicy", "attachNodeTerminator")
 
+	// cluster-autoscaler {{{
 	clusterAutoscalerPolicyFn := rund.NewFuncOperator(func() error {
 		nodeASGA, _ := c.getState("nodeASGA", false)
 		nodeASGB, _ := c.getState("nodeASGB", false)
@@ -1250,6 +1251,66 @@ sudo hyperctl node`)
 	run.AddNode("attachClusterAutoscaler", attachClusterAutoscalerFn)
 	run.AddEdge("clusterAutoscalerRole", "attachClusterAutoscaler")
 	run.AddEdge("clusterAutoscalerPolicy", "attachClusterAutoscaler")
+	// }}}
+
+	// hypergrade {{{
+	hypergradePolicyFn := rund.NewFuncOperator(func() error {
+		p := policy{
+			Statement: []statement{
+				{
+					Action: []string{
+						"ec2:ModifyLaunchTemplate",
+						"ec2:CreateLaunchTemplateVersion",
+					},
+					Effect: "Allow",
+					Resource: []string{
+						"arn:aws:ec2:*:"+c.AccountID+":launch-template/*"+c.Id+"*",
+						"arn:aws:ec2:*::image/*",
+					},
+				},
+				{
+					Action: []string{
+						"autoscaling:DescribeAutoScalingGroups",
+						"autoscaling:DescribeAutoScalingInstances",
+						"autoscaling:DescribeLaunchConfigurations",
+						"autoscaling:DescribeTags",
+						"ec2:DescribeLaunchTemplateVersions",
+					},
+					Effect: "Allow",
+					Resource: []string{ "*" },
+				},
+			},
+		}
+		capolicy, err := c.CreatePolicy("hypergrade-" + c.Id, p)
+		if err != nil {
+			return err
+		}
+		return c.saveState("hypergradePolicy", []string{capolicy}, true)
+	})
+	run.AddNode("hypergradePolicy", hypergradePolicyFn)
+	run.AddEdge("createNodeAAsg", "hypergradePolicy")
+	run.AddEdge("createNodeBAsg", "hypergradePolicy")
+	run.AddEdge("createNodeCAsg", "hypergradePolicy")
+
+	hypergradeRoleFn := rund.NewFuncOperator(func() error {
+		_, err = c.CreateIRSARole("hypergrade-"+c.Id, "kube-system", "hypergrade")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	run.AddNode("hypergradeRole", hypergradeRoleFn)
+	run.AddEdge("table", "hypergradeRole")
+	run.AddEdge("oidcIAM", "hypergradeRole")
+
+	attachHypergradeFn := rund.NewFuncOperator(func() error {
+		caPolicy, _ := c.getState("hypergradePolicy", false)
+		return c.AttachPolicy("hypergrade-"+c.Id, caPolicy[0])
+	})
+	run.AddNode("attachHypergrade", attachHypergradeFn)
+	run.AddEdge("hypergradeRole", "attachHypergrade")
+	run.AddEdge("hypergradePolicy", "attachHypergrade")
+	// }}}
 
 	attachKeyMaster := rund.NewFuncOperator(func() error {
 		ebsEncryptPolicy, _ := c.getState("ebsPolicy", false)
