@@ -97,7 +97,7 @@ func (c *Client) Destroy() error {
 	destroyHypergradeRoleFn := rund.NewFuncOperator(func() error {
 		return c.destroyRole("hypergrade-"+c.Id)
 	})
-	run.AddNode("hypergrade", destroyHypergradeRoleFn)
+	run.AddNode("hypergradeRole", destroyHypergradeRoleFn)
 	destroyHypergradePolicyFn := rund.NewFuncOperator(func() error {
 		policy, err := c.getState("hypergradePolicy", true)
 		if err != nil {
