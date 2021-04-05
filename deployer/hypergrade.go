@@ -15,6 +15,10 @@ func (d *Deployer) Hypergrade() error {
 		log.Errorf("failed to create hyperspike configmap, %v", err)
 		return err
 	}
+	if err := d.r.Create(context.Background(), hyperspikeConfigMap(d.accountId)); err != nil {
+		log.Errorf("failed to crate hyperspike config map, %v", err)
+		return err
+	}
 	err := d.r.Create(context.Background(), hypergradeServiceAccount("arn:aws:iam::"+d.accountId+":role/hypergrade-"+d.cluster))
 	if err != nil {
 		log.Errorf("failed to create hypergrade service account, %v", err)
