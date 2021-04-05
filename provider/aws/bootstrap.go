@@ -949,10 +949,6 @@ func (c *Client) CreateCluster(vpcid, masterType, nodeType string) {
 	})
 	run.AddNode("ami", amiFn)
 
-	edgeTemplateFn := rund.NewFunctionOperator(func() error {
-		log.Info("creating edge launch template")
-	})
-
 	masterTemplateFn := rund.NewFuncOperator(func() error {
 		log.Info("creating master launch template")
 		ami, _ := c.getState("ami", false)
