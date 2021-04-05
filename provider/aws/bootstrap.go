@@ -2737,7 +2737,7 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 		MaxSize:                 aws.Int64(max),
 		MinSize:                 aws.Int64(min),
 		DesiredCapacity:         aws.Int64(desired),
-		DefaultCooldown:         aws.Int64(40),
+		DefaultCooldown:         aws.Int64(30),
 		VPCZoneIdentifier:       aws.String(subnet),
 		Tags:                    t,
 	}
@@ -2745,28 +2745,39 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 		input.LoadBalancerNames = []string{lb}
 	}
 
-	req := svc.CreateAutoScalingGroupRequest(input)
-	_, err := req.Send(context.Background())
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case autoscaling.ErrCodeAlreadyExistsFault:
-				log.Error(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
-			case autoscaling.ErrCodeLimitExceededFault:
-				log.Error(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
-			case autoscaling.ErrCodeResourceContentionFault:
-				log.Error(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
-			case autoscaling.ErrCodeServiceLinkedRoleFailure:
-				log.Error(autoscaling.ErrCodeServiceLinkedRoleFailure, aerr.Error())
-			default:
-				log.Error(aerr.Error())
+	count := 0
+	limit := 15
+
+	for {
+		req := svc.CreateAutoScalingGroupRequest(input)
+		_, err := req.Send(context.Background())
+		if err != nil {
+			count++
+			if count > limit {
+				if aerr, ok := err.(awserr.Error); ok {
+					switch aerr.Code() {
+					case autoscaling.ErrCodeAlreadyExistsFault:
+						log.Error(autoscaling.ErrCodeAlreadyExistsFault, aerr.Error())
+					case autoscaling.ErrCodeLimitExceededFault:
+						log.Error(autoscaling.ErrCodeLimitExceededFault, aerr.Error())
+					case autoscaling.ErrCodeResourceContentionFault:
+						log.Error(autoscaling.ErrCodeResourceContentionFault, aerr.Error())
+					case autoscaling.ErrCodeServiceLinkedRoleFailure:
+						log.Error(autoscaling.ErrCodeServiceLinkedRoleFailure, aerr.Error())
+					default:
+						log.Error(aerr.Error())
+					}
+				} else {
+					// Print the error, cast err to awserr.Error to get the Code and
+					// Message from an error.
+					log.Error(err.Error())
+				}
+				return "", err
 			}
+			time.Sleep(5 * time.Second)
 		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.Error(err.Error())
+			break
 		}
-		return "", err
 	}
 
 	in := &autoscaling.PutLifecycleHookInput{
@@ -2778,7 +2789,7 @@ func (c *Client) createASG(name, template, subnet, lb string, min, max, desired 
 	}
 
 	r := svc.PutLifecycleHookRequest(in)
-	_, err = r.Send(context.Background())
+	_, err := r.Send(context.Background())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -2842,7 +2853,7 @@ func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data strin
 			InstanceType:            ec2.InstanceType(size),
 			KeyName:                 aws.String(key),
 			UserData:                aws.String(base64.StdEncoding.EncodeToString([]byte(data))),
-			SecurityGroups: []string{
+			SecurityGroupIds: []string{
 				sg,
 			},
 		},
@@ -2857,7 +2868,6 @@ func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data strin
 		result, err = req.Send(context.Background())
 		log.Info(result)
 		if err != nil {
-			log.Errorf("failed to create launch config %v", err)
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				case autoscaling.ErrCodeAlreadyExistsFault:
@@ -2876,6 +2886,7 @@ func (c *Client) createLaunchTemplate(name, size, ami, role, key, sg, data strin
 			}
 			count++
 			if count > 15 {
+				log.Errorf("failed to create launch config %v", err)
 				return "", err
 			}
 			time.Sleep(5 * time.Second)

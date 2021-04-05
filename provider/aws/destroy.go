@@ -94,6 +94,20 @@ func (c *Client) Destroy() error {
 	run.AddNode("nodeTerminatorPolicy", destroyNodeTerminatorPolicyFn)
 	run.AddEdge("nodeTerminatorRole", "nodeTerminatorPolicy")
 
+	destroyHypergradeRoleFn := rund.NewFuncOperator(func() error {
+		return c.destroyRole("hypergrade-"+c.Id)
+	})
+	run.AddNode("hypergrade", destroyHypergradeRoleFn)
+	destroyHypergradePolicyFn := rund.NewFuncOperator(func() error {
+		policy, err := c.getState("hypergradePolicy", true)
+		if err != nil {
+			return err
+		}
+		return c.destroyPolicy(policy[0])
+	})
+	run.AddNode("hypergradePolicy", destroyHypergradePolicyFn)
+	run.AddEdge("hypergradeRole", "hypergradePolicy")
+
 	destroyNodeTerminatorSQSFn := rund.NewFuncOperator(func() error {
 		url, err := c.getState("nodeTerminatorSQS", true)
 		if err != nil {
@@ -884,11 +898,11 @@ func (c *Client) destroyASG(name string) error {
 }
 
 func (c *Client) destroyTemplate(name string) error {
-	svc := autoscaling.New(c.Cfg)
-	input := &autoscaling.DeleteLaunchConfigurationInput{
-		LaunchConfigurationName: aws.String(name),
+	svc := ec2.New(c.Cfg)
+	input := &ec2.DeleteLaunchTemplateInput{
+		LaunchTemplateName: aws.String(name),
 	}
-	req := svc.DeleteLaunchConfigurationRequest(input)
+	req := svc.DeleteLaunchTemplateRequest(input)
 	_, err := req.Send(context.TODO())
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {

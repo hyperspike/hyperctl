@@ -267,6 +267,14 @@ func irsaDeployment() *appsv1.Deployment { // {{{
 								"--annotation-prefix=eks.amazonaws.com",
 								"--token-audience=sts.amazonaws.com",
 								"--logtostderr",
+								"--port=8443",
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8443,
+									Protocol:      "TCP",
+									Name:          "http",
+								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -332,7 +340,7 @@ func irsaService() *corev1.Service { // {{{
 			Ports: []corev1.ServicePort{
 				{
 					Port: 443,
-					TargetPort: intstr.FromInt(443),
+					TargetPort: intstr.FromInt(8443),
 				},
 			},
 			Selector: map[string]string{
