@@ -11,10 +11,6 @@ import (
 
 func (d *Deployer) Hypergrade() error {
 	log.Infof("deploying hypergrade to %s", d.cluster)
-	if err := d.r.Create(context.Background(), hypergradeClusterRole()); err != nil {
-		log.Errorf("failed to create hyperspike configmap, %v", err)
-		return err
-	}
 	if err := d.r.Create(context.Background(), hyperspikeConfigMap(d.accountId)); err != nil {
 		log.Errorf("failed to crate hyperspike config map, %v", err)
 		return err
