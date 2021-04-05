@@ -10,7 +10,7 @@ COPY ./ $GOPATH/src/hyperspike/hyperctl/
 RUN apk --no-cache add make binutils \
 	&& make VERSION=${VERSION} PREFIX=/usr install
 
-FROM alpine:3.12.3
+FROM alpine:3.13.3
 
 COPY --from=build /usr/bin/hyperctl /usr/bin/hyperctl
 
