@@ -72,6 +72,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 ## Alpha
 
 * [ ] More Kubernetes configs; cilium, psp, servicemonitors, resource requests, metrics-server, network policies
+  * [ ] Cilium to leverage cilium-cli libriaries for deployment
 * [ ] aws-ebs-csi
 * [-] Config options
   * [ ] existing vpc
