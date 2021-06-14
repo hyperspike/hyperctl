@@ -84,6 +84,7 @@ apiServer:
     service-account-issuer: https://s3.{{ .Region }}.amazonaws.com/{{ .ClusterName -}}-irsa/
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
     kubelet-preferred-address-types: Hostname,InternalDNS
+    logging-format: json
 certificatesDir: /etc/kubernetes/pki
 clusterName: {{ .ClusterName }}
 controlPlaneEndpoint: {{ .LBDnsPriv -}}:6443
@@ -91,9 +92,11 @@ controllerManager:
   extraArgs:
     cloud-provider: external
     bind-address: 0.0.0.0
+    logging-format: json
 scheduler:
   extraArgs:
     bind-address: 0.0.0.0
+    logging-format: json
 dns:
   type: CoreDNS
 etcd:

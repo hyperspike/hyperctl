@@ -1,4 +1,4 @@
-FROM golang:1.15.7-alpine3.12 AS build
+FROM golang:1.16.5-alpine3.13 AS build
 
 ARG VERSION
 
@@ -10,7 +10,7 @@ COPY ./ $GOPATH/src/hyperspike/hyperctl/
 RUN apk --no-cache add make binutils \
 	&& make VERSION=${VERSION} PREFIX=/usr install
 
-FROM alpine:3.13.3
+FROM alpine:3.13
 
 COPY --from=build /usr/bin/hyperctl /usr/bin/hyperctl
 

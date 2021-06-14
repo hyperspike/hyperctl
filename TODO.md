@@ -71,16 +71,16 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 ## Alpha
 
+* [ ] More Kubernetes configs; cilium, psp, servicemonitors, resource requests, metrics-server, network policies
+* [ ] aws-ebs-csi
 * [-] Config options
   * [ ] existing vpc
   * [x] control-plane size
   * [x] worker size
-* [ ] Support automated upgrades, can probably just update the launch config via an on cluster daemon
-* [ ] structured logging for cri-o and kubernetes
+* [-] Support automated upgrades, can probably just update the launch config via an on cluster daemon
 * [ ] Support Additional User-Set Tags
 * [ ] autocomplete on remote state search
-* [ ] More Kubernetes configs; cilium, psp, servicemonitors, resource requests, metrics-server, network policies
-* [ ] aws-ebs-csi
+* [x] structured logging for cri-o and kubernetes
 * [x] Split logging into; to file on server and console on workstation
 * [x] nat instances per zone
 * [x] Better cli ergonomics
@@ -99,6 +99,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 ## Beta
 
+* [ ] convert nat instances to ASGs
 * [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
 * [ ] falco
 * [ ] Terraform provider
