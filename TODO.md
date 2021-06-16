@@ -78,7 +78,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
   * [ ] existing vpc
   * [x] control-plane size
   * [x] worker size
-* [-] Support automated upgrades, can probably just update the launch config via an on cluster daemon
+* [-] Support automated upgrades, can probably just update the launch config via an on-cluster daemon
 * [ ] Support Additional User-Set Tags
 * [ ] autocomplete on remote state search
 * [x] structured logging for cri-o and kubernetes
@@ -100,10 +100,15 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 
 ## Beta
 
+* [ ] Upgrade aws library
+* [ ] Support metal
+* [ ] Support OCI?
+* [ ] move secret and cert management to vault and support bootstraping
 * [ ] convert nat instances to ASGs
 * [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
 * [ ] falco
 * [ ] Terraform provider
+* [ ] cluster-api provider and bootstrap
 * [ ] Edge node VPN access ( voucher + cilium )
 * [ ] Plugins
   * [ ] support cilium-etcd and etcd-operator (optional)
@@ -113,5 +118,4 @@ Everything upto the admin.conf uploader has been written. Control plane has been
   * [ ] support CI (optional, requires ingress)
   * [ ] support CD (optional, requires ingress)
   * [ ] support Monitoring (optional, requires ingess)
-* [ ] cluster-api provider and bootstrap
 * [ ] GCP Support
