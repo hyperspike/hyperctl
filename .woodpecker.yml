@@ -11,7 +11,7 @@ pipeline:
     commands:
     - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
   lint:
-    image: golangci/golangci-lint:v1.36.0-alpine
+    image: golangci/golangci-lint:v1.43.0-alpine
     environment:
       GOPATH: "/drone/src/go"
       GOCACHE: "/drone/src/cache"
