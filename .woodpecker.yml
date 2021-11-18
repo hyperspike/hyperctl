@@ -10,6 +10,13 @@ pipeline:
       GOCACHE: "/drone/src/cache"
     commands:
     - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
+  lint:
+    image: golangci/golangci-lint:v1.36.0-alpine
+    environment:
+      GOPATH: "/drone/src/go"
+      GOCACHE: "/drone/src/cache"
+    commands:
+    - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
 
 #kind: pipeline
 #name: default
