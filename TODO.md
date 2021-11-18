@@ -100,7 +100,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 ## Beta
 
 * [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
-* [ ] falco
+* [x] falco
 * [ ] Terraform provider
 * [ ] Edge node VPN access ( voucher + cilium )
 * [ ] Plugins
