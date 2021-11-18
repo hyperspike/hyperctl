@@ -4,7 +4,7 @@ clone:
     skip_verify: true
 pipeline:
   go-sec:
-    image: securego/gosec:v2.6.1
+    image: securego/gosec:v2.9.2
     environment:
       GOPATH: "/drone/src/go"
       GOCACHE: "/drone/src/cache"
