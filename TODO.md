@@ -106,7 +106,7 @@ Everything upto the admin.conf uploader has been written. Control plane has been
 * [ ] move secret and cert management to vault and support bootstraping
 * [ ] convert nat instances to ASGs
 * [ ] arm support / graviton2 (not going to bother with user facing CLI, just machine images)
-* [ ] falco
+* [x] falco
 * [ ] Terraform provider
 * [ ] cluster-api provider and bootstrap
 * [ ] Edge node VPN access ( voucher + cilium )

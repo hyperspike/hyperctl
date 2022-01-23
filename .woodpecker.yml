@@ -1,113 +1,137 @@
----
-kind: pipeline
-name: default
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    skip_verify: true
+pipeline:
+  go-sec:
+    image: securego/gosec:v2.9.2
+    environment:
+      GOPATH: "/drone/src/go"
+      GOCACHE: "/drone/src/cache"
+    commands:
+    - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
+  go-lint:
+    image: golangci/golangci-lint:v1.43.0-alpine
+    environment:
+      GOPATH: "/drone/src/go"
+      GOCACHE: "/drone/src/cache"
+    commands:
+    - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
+  docker-lint:
+    image: ghcr.io/hadolint/hadolint:v2.8.0-alpine
+    commands:
+    - hadolint Dockerfile
 
-platform:
-  os: linux
-  arch: amd64
 
-notify:
-  image: drillster/drone-email
-  host: mail.d3fy.net
-  username: dan
-  port: 465
-  password:
-    from_secret: email_password
-  from: drone@hyperspike.io
-  recipients: [ dan@hyperspike.io ]
-  when:
-    status: [ changed, failure ]
-
-steps:
-- name: cache-pull
-  image: meltwater/drone-cache:v1.1.0
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: aws_access_key_id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: aws_secret_access_key
-  settings:
-    restore: true
-    cache_key: "cache"
-    archive_format: "gzip"
-    bucket: drone-cache
-    endpoint: http://10.12.4.114:9000
-    region: us-east-1
-    path_style: true
-    mount:
-    - "go"
-    - "cache"
-#- name: vet
-#  image: graytshirt/golang:0.0.5
+#kind: pipeline
+#name: default
+#
+#platform:
+#  os: linux
+#  arch: amd64
+#
+#notify:
+#  image: drillster/drone-email
+#  host: mail.d3fy.net
+#  username: dan
+#  port: 465
+#  password:
+#    from_secret: email_password
+#  from: drone@hyperspike.io
+#  recipients: [ dan@hyperspike.io ]
+#  when:
+#    status: [ changed, failure ]
+#
+#steps:
+#- name: cache-pull
+#  image: meltwater/drone-cache:v1.1.0
+#  environment:
+#    AWS_ACCESS_KEY_ID:
+#      from_secret: aws_access_key_id
+#    AWS_SECRET_ACCESS_KEY:
+#      from_secret: aws_secret_access_key
+#  settings:
+#    restore: true
+#    cache_key: "cache"
+#    archive_format: "gzip"
+#    bucket: drone-cache
+#    endpoint: http://10.12.4.114:9000
+#    region: us-east-1
+#    path_style: true
+#    mount:
+#    - "go"
+#    - "cache"
+##- name: vet
+##  image: graytshirt/golang:0.0.5
+##  environment:
+##    GOPATH: "/drone/src/go"
+##  commands:
+##  - make vet
+#- name: lint
+#  image: golangci/golangci-lint:v1.36.0-alpine
 #  environment:
 #    GOPATH: "/drone/src/go"
+#    GOCACHE: "/drone/src/cache"
 #  commands:
-#  - make vet
-- name: lint
-  image: golangci/golangci-lint:v1.36.0-alpine
-  environment:
-    GOPATH: "/drone/src/go"
-    GOCACHE: "/drone/src/cache"
-  commands:
-  - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
-- name: sec
-  image: securego/gosec:v2.6.1
-  environment:
-    GOPATH: "/drone/src/go"
-    GOCACHE: "/drone/src/cache"
-  commands:
-  - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
-- name: docker-lint
-  image: ghcr.io/hadolint/hadolint:v2.0.0-alpine
-  commands:
-  - hadolint Dockerfile
-- name: build
-  image: graytshirt/golang:0.0.6
-  environment:
-    GOPATH: "/drone/src/go"
-    GOCACHE: "/drone/src/cache"
-  commands:
-  - make build
-- name: e2e
-  image: graytshirt/golang:0.0.6
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: hyperspike_aws_access_key_id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: hyperspike_aws_secret_access_key
-    AWS_DEFAULT_REGION: us-east-2
-    GOPATH: "/drone/src/go"
-    GOCACHE: "/drone/src/cache"
-  commands:
-  - ./hyperctl version
-  - ./hyperctl boot
-  - ./hyperctl destroy $(./hyperctl clusters|awk '{print $1}')
-- name: cache-push
-  image: meltwater/drone-cache:v1.1.0
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: aws_access_key_id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: aws_secret_access_key
-  settings:
-    rebuild: true
-    cache_key: "cache"
-    archive_format: "gzip"
-    bucket: drone-cache
-    endpoint: http://10.12.4.114:9000
-    region: us-east-1
-    path_style: true
-    mount:
-    - "go"
-    - "cache"
-
-- name: release
-  image: graytshirt/kaniko
-  commands:
-  - /executor
-  when:
-    ref:
-    - refs/tags/**
+#  - golangci-lint run --timeout 5m -v --skip-dirs "mod|cache|tmp|go"
+#- name: sec
+#  image: securego/gosec:v2.6.1
+#  environment:
+#    GOPATH: "/drone/src/go"
+#    GOCACHE: "/drone/src/cache"
+#  commands:
+#  - gosec -exclude-dir mod -exclude-dir cache -exclude-dir tmp -exclude-dir go ./...
+#- name: docker-lint
+#  image: ghcr.io/hadolint/hadolint:v2.0.0-alpine
+#  commands:
+#  - hadolint Dockerfile
+#- name: build
+#  image: graytshirt/golang:0.0.6
+#  environment:
+#    GOPATH: "/drone/src/go"
+#    GOCACHE: "/drone/src/cache"
+#  commands:
+#  - make build
+#- name: e2e
+#  image: graytshirt/golang:0.0.6
+#  environment:
+#    AWS_ACCESS_KEY_ID:
+#      from_secret: hyperspike_aws_access_key_id
+#    AWS_SECRET_ACCESS_KEY:
+#      from_secret: hyperspike_aws_secret_access_key
+#    AWS_DEFAULT_REGION: us-east-2
+#    GOPATH: "/drone/src/go"
+#    GOCACHE: "/drone/src/cache"
+#  commands:
+#  - ./hyperctl version
+#  - ./hyperctl boot
+#  - ./hyperctl destroy $(./hyperctl clusters|awk '{print $1}')
+#- name: cache-push
+#  image: meltwater/drone-cache:v1.1.0
+#  environment:
+#    AWS_ACCESS_KEY_ID:
+#      from_secret: aws_access_key_id
+#    AWS_SECRET_ACCESS_KEY:
+#      from_secret: aws_secret_access_key
+#  settings:
+#    rebuild: true
+#    cache_key: "cache"
+#    archive_format: "gzip"
+#    bucket: drone-cache
+#    endpoint: http://10.12.4.114:9000
+#    region: us-east-1
+#    path_style: true
+#    mount:
+#    - "go"
+#    - "cache"
+#
+#- name: release
+#  image: graytshirt/kaniko
+#  commands:
+#  - /executor
+#  when:
+#    ref:
+#    - refs/tags/**
 
 ---
 kind: signature
