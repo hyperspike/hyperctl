@@ -227,7 +227,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 								"--config-dir=/tmp/cilium/config-map",
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Host: "127.0.0.1",
 										Path: "/healthz",
@@ -322,7 +322,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 								},
 							},
 							Lifecycle: &corev1.Lifecycle{
-								PostStart: &corev1.Handler{
+								PostStart: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
 											"/cni-install.sh",
@@ -330,7 +330,7 @@ func (d *Deployer) ciliumDaemonSet() error { // {{{
 										},
 									},
 								},
-								PreStop: &corev1.Handler{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
 											"/cni-uninstall.sh",
@@ -725,7 +725,7 @@ func (d *Deployer) ciliumOperatorDeployment() error { // {{{
 								},
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Host: "127.0.0.1",
 										Path: "/healthz",
