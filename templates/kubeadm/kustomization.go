@@ -18,6 +18,7 @@ patchesJson6902:
 `
 }
 func (c *KubeConf) KustomizationFile(fn string) error {
+	// #nosec
 	file, err := os.Create(fn)
 	if err != nil {
 		if err := file.Close() ; err != nil {
@@ -76,6 +77,7 @@ func (c *KubeConf) ApiSecretsProviderYaml() string {
 `
 }
 func (c *KubeConf) ApiSecretsProviderFile(fn string) error {
+	// #nosec
 	file, err := os.Create(fn)
 	if err != nil {
 		log.Errorf("failed to create %s %v", fn, err)

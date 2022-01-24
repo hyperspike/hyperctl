@@ -121,6 +121,7 @@ networking:
 }
 
 func (c *KubeConf) KubeadmFile(fn string) error {
+	// #nosec
 	file, err := os.Create(fn)
 	if err != nil {
 		log.Errorf("failed to create %s %v", fn, err)

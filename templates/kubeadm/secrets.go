@@ -26,6 +26,7 @@ resources:
 }
 
 func (c *KubeConf) SecretsFile(fn string) error {
+	// #nosec
 	file, err := os.Create(fn)
 	if err != nil {
 		log.Errorf("failed to create %s %v", fn, err)
@@ -99,6 +100,7 @@ spec:
 }
 
 func (c *KubeConf) SecretsProviderFile(fn string) error {
+	// #nosec
 	file, err := os.Create(fn)
 	if err != nil {
 		log.Errorf("failed to create %s %v", fn, err)
