@@ -9,7 +9,7 @@ require (
 	github.com/google/goexpect v0.0.0-20200703111054-623d5ca06f56
 	github.com/google/uuid v1.3.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v1.2.1
 	github.com/wolfeidau/dynalock/v2 v2.0.0
 	golang.org/x/crypto v0.36.0
